@@ -29,7 +29,7 @@ inference_client = OpenAI(
     api_key=os.environ.get("NVIDIA_API_KEY"),
 )
 
-MODEL = os.environ.get("JENSEN_MODEL", "nvidia/nemotron-3-super-120b-a12b")
+MODEL = os.environ.get("JENSEN_MODEL", "aws/anthropic/bedrock-claude-opus-4-6")
 AVAILABLE_MODELS = {
     "nvidia/nemotron-3-super-120b-a12b": {"name": "Nemotron 3 Super 120B", "provider": "nim"},
     "moonshotai/kimi-k2.5": {"name": "Kimi K2.5", "provider": "nim"},
