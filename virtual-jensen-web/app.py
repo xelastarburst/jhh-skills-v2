@@ -17,23 +17,23 @@ app = FastAPI(title="Strategy Meeting with Jensen Huang")
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# NVIDIA NIM API
+# NVIDIA NIM API (for NIM catalog models)
 nim_client = OpenAI(
     base_url="https://integrate.api.nvidia.com/v1",
-    api_key=os.environ.get("NVIDIA_API_KEY"),
+    api_key=os.environ.get("NVIDIA_NIM_KEY", os.environ.get("NVIDIA_API_KEY")),
 )
 
 # NVIDIA Inference API (for Bedrock/Claude models)
 inference_client = OpenAI(
-    base_url="https://inference-api.nvidia.com",
-    api_key=os.environ.get("NVIDIA_INFERENCE_API_KEY"),
+    base_url="https://inference-api.nvidia.com/v1",
+    api_key=os.environ.get("NVIDIA_API_KEY"),
 )
 
 MODEL = os.environ.get("JENSEN_MODEL", "nvidia/nemotron-3-super-120b-a12b")
 AVAILABLE_MODELS = {
     "nvidia/nemotron-3-super-120b-a12b": {"name": "Nemotron 3 Super 120B", "provider": "nim"},
     "moonshotai/kimi-k2.5": {"name": "Kimi K2.5", "provider": "nim"},
-    # "us/aws/anthropic/bedrock-claude-opus-4-6": {"name": "Claude Opus 4.6", "provider": "inference"},  # TODO: re-enable when key has model access
+    "aws/anthropic/bedrock-claude-opus-4-6": {"name": "Claude Opus 4.6", "provider": "inference"},
 }
 MAX_TOKENS = 4096
 
