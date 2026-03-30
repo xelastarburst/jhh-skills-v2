@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Sources — Virtual Jensen</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-tertiary: #1e1e1e;
+            --text-primary: #e8e8e8;
+            --text-secondary: #999;
+            --text-muted: #666;
+            --accent: #76b900;
+            --accent-dim: #5a8f00;
+            --border: #2a2a2a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        header {
+            padding: 24px 0 20px;
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+            background: var(--bg-secondary);
+        }
+
+        header .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        header h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        header h1 .accent { color: var(--accent); }
+
+        header .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        header .back-link {
+            font-size: 0.85rem;
+            color: var(--accent);
+            text-decoration: none;
+            margin-top: 4px;
+        }
+
+        header .back-link:hover { color: var(--accent-dim); }
+
+        .content {
+            padding: 32px 0 64px;
+            line-height: 1.7;
+            font-size: 0.925rem;
+        }
+
+        .content h1 {
+            font-size: 1.5rem;
+            color: var(--accent);
+            margin: 0 0 8px;
+        }
+
+        .content h2 {
+            font-size: 1.15rem;
+            color: var(--accent);
+            margin: 36px 0 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .content h3 {
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin: 24px 0 8px;
+        }
+
+        .content p {
+            margin-bottom: 12px;
+            color: var(--text-secondary);
+        }
+
+        .content strong { color: var(--text-primary); font-weight: 600; }
+        .content em { color: var(--text-muted); }
+
+        .content a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .content a:hover { text-decoration: underline; }
+
+        .content ul, .content ol {
+            margin: 8px 0 16px 20px;
+            color: var(--text-secondary);
+        }
+
+        .content li { margin-bottom: 4px; }
+
+        .content hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 32px 0;
+        }
+
+        .content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            font-size: 0.85rem;
+        }
+
+        .content th, .content td {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+
+        .content th {
+            background: rgba(118, 185, 0, 0.08);
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .content td { color: var(--text-secondary); }
+
+        .content code {
+            background: rgba(118, 185, 0, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: var(--accent);
+        }
+
+        .emoji { font-size: 1.1em; }
+
+        @media (max-width: 600px) {
+            .container { padding: 0 16px; }
+            header h1 { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1><span class="accent">■</span> Research Sources</h1>
+            <div class="subtitle">26 primary sources behind the Virtual Jensen reasoning engine</div>
+            <a href="/" class="back-link">← Back to Strategy Meeting</a>
+        </div>
+    </header>
+    <div class="container">
+        <div class="content" id="content">Loading...</div>
+    </div>
+    <script>
+        async function loadResearch() {
+            try {
+                const resp = await fetch('/api/research');
+                const data = await resp.json();
+                document.getElementById('content').innerHTML = renderMarkdown(data.html);
+            } catch (e) {
+                document.getElementById('content').innerHTML = '<p>Failed to load research sources.</p>';
+            }
+        }
+
+        function renderMarkdown(text) {
+            let html = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+
+            // Tables
+            html = html.replace(/^(\|.+\|)\n(\|[-| :]+\|)\n((?:\|.+\|\n?)+)/gm, (match, headerRow, sepRow, bodyRows) => {
+                const headers = headerRow.split('|').filter(c => c.trim());
+                const rows = bodyRows.trim().split('\n').map(r => r.split('|').filter(c => c.trim()));
+                let table = '<table><thead><tr>';
+                headers.forEach(h => table += `<th>${h.trim()}</th>`);
+                table += '</tr></thead><tbody>';
+                rows.forEach(row => {
+                    table += '<tr>';
+                    row.forEach(cell => table += `<td>${cell.trim()}</td>`);
+                    table += '</tr>';
+                });
+                table += '</tbody></table>';
+                return table;
+            });
+
+            // Horizontal rules
+            html = html.replace(/^---$/gm, '<hr>');
+
+            // Headers
+            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+            html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+            html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+
+            // Links
+            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+            // Bold and italic
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+            // Inline code
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+            // Emoji links
+            html = html.replace(/(🔗|📰|📝)/g, '<span class="emoji">$1</span>');
+
+            // Unordered lists
+            html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+            html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
+
+            // Paragraphs
+            html = html.replace(/\n\n+/g, '</p><p>');
+            html = '<p>' + html + '</p>';
+
+            // Clean up
+            html = html.replace(/<p>\s*<\/p>/g, '');
+            html = html.replace(/<p>(<h[123]>)/g, '$1');
+            html = html.replace(/(<\/h[123]>)<\/p>/g, '$1');
+            html = html.replace(/<p>(<hr>)<\/p>/g, '$1');
+            html = html.replace(/<p>(<table>)/g, '$1');
+            html = html.replace(/(<\/table>)<\/p>/g, '$1');
+            html = html.replace(/<p>(<ul>)/g, '$1');
+            html = html.replace(/(<\/ul>)<\/p>/g, '$1');
+
+            return html;
+        }
+
+        loadResearch();
+    </script>
+</body>
+</html>

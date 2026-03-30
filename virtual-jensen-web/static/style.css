@@ -72,6 +72,17 @@ html, body {
     font-style: italic;
 }
 
+.header .subtitle .research-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-style: normal;
+    font-size: 0.8rem;
+}
+
+.header .subtitle .research-link:hover {
+    text-decoration: underline;
+}
+
 .model-selector {
     display: flex;
     align-items: center;

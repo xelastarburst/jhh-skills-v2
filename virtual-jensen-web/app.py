@@ -238,6 +238,19 @@ async def index():
     return FileResponse("static/index.html")
 
 
+@app.get("/research")
+async def research_page():
+    return FileResponse("static/research.html")
+
+
+@app.get("/api/research")
+async def research_content():
+    research_path = os.path.join(os.path.dirname(__file__), "static", "RESEARCH.md")
+    with open(research_path, "r") as f:
+        content = f.read()
+    return {"html": content}
+
+
 @app.get("/api/models")
 async def list_models():
     models = {k: v["name"] for k, v in AVAILABLE_MODELS.items()}
