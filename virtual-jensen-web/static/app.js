@@ -99,7 +99,11 @@ function addMessage(role, content) {
 
     const avatar = document.createElement('div');
     avatar.className = 'avatar';
-    avatar.textContent = role === 'jensen' ? '🧥' : '💬';
+    if (role === 'jensen') {
+        avatar.innerHTML = '<img src="/static/jensen-avatar.svg" alt="Jensen" style="width:28px;height:28px">';
+    } else {
+        avatar.textContent = '💬';
+    }
 
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
@@ -123,7 +127,7 @@ function createStreamingMessage() {
 
     const avatar = document.createElement('div');
     avatar.className = 'avatar';
-    avatar.textContent = '🧥';
+    avatar.innerHTML = '<img src="/static/jensen-avatar.svg" alt="Jensen" style="width:28px;height:28px">';
 
     const bubble = document.createElement('div');
     bubble.className = 'bubble';

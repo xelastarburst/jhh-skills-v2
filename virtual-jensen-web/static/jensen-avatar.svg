@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Leather jacket icon - Jensen's signature -->
+  <circle cx="32" cy="32" r="30" fill="#1a1a2e" stroke="#76b900" stroke-width="1.5"/>
+  <!-- Jacket body -->
+  <path d="M16 26 L22 20 L28 22 L32 18 L36 22 L42 20 L48 26 L48 48 L40 50 L32 46 L24 50 L16 48 Z" fill="#1a1a1a" stroke="#444" stroke-width="1"/>
+  <!-- Collar -->
+  <path d="M22 20 L28 22 L32 18 L36 22 L42 20 L38 26 L32 24 L26 26 Z" fill="#111" stroke="#555" stroke-width="0.8"/>
+  <!-- Lapels -->
+  <path d="M28 22 L30 30 L32 24 Z" fill="#222" stroke="#444" stroke-width="0.5"/>
+  <path d="M36 22 L34 30 L32 24 Z" fill="#222" stroke="#444" stroke-width="0.5"/>
+  <!-- Center zipper -->
+  <line x1="32" y1="24" x2="32" y2="46" stroke="#666" stroke-width="0.8" stroke-dasharray="2,2"/>
+  <!-- Zipper pull -->
+  <rect x="31" y="28" width="2" height="3" rx="0.5" fill="#888"/>
+  <!-- Shoulder seams -->
+  <line x1="22" y1="20" x2="16" y2="26" stroke="#555" stroke-width="0.5"/>
+  <line x1="42" y1="20" x2="48" y2="26" stroke="#555" stroke-width="0.5"/>
+</svg>
