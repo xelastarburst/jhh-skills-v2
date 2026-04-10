@@ -9,6 +9,7 @@ const welcomeScreen = document.getElementById('welcome');
 const startBtn = document.getElementById('start-btn');
 const newMeetingBtn = document.getElementById('new-meeting-btn');
 const modelSelect = document.getElementById('model-select');
+const modeSelect = document.getElementById('mode-select');
 
 const exportGroup = document.getElementById('export-group');
 const exportSummaryBtn = document.getElementById('export-summary-btn');
@@ -23,6 +24,7 @@ const modalDownload = document.getElementById('modal-download');
 let conversationHistory = [];
 let isStreaming = false;
 let selectedModel = '';
+let selectedMode = 'sharp';
 let currentExportMarkdown = '';
 
 // --- Load available models ---
@@ -46,6 +48,29 @@ async function loadModels() {
 
 modelSelect.addEventListener('change', () => {
     selectedModel = modelSelect.value;
+});
+
+// --- Load available modes ---
+async function loadModes() {
+    try {
+        const resp = await fetch('/api/modes');
+        const data = await resp.json();
+        modeSelect.innerHTML = '';
+        for (const [id, name] of Object.entries(data.modes)) {
+            const opt = document.createElement('option');
+            opt.value = id;
+            opt.textContent = name;
+            if (id === data.default) opt.selected = true;
+            modeSelect.appendChild(opt);
+        }
+        selectedMode = modeSelect.value;
+    } catch (e) {
+        console.error('Failed to load modes:', e);
+    }
+}
+
+modeSelect.addEventListener('change', () => {
+    selectedMode = modeSelect.value;
 });
 
 // --- Markdown rendering (lightweight) ---
@@ -253,7 +278,7 @@ async function streamResponse(url, body = null) {
 async function startMeeting() {
     if (startBtn) startBtn.disabled = true;
 
-    const jensenText = await streamResponse('/api/start', { model: selectedModel });
+    const jensenText = await streamResponse('/api/start', { model: selectedModel, mode: selectedMode });
 
     if (jensenText) {
         conversationHistory.push({
@@ -282,6 +307,7 @@ async function sendMessage() {
     const jensenText = await streamResponse('/api/chat', {
         messages: conversationHistory,
         model: selectedModel,
+        mode: selectedMode,
     });
 
     if (jensenText) {
@@ -431,3 +457,4 @@ exportSummaryBtn.addEventListener('click', exportSummary);
 exportTranscriptBtn.addEventListener('click', exportTranscript);
 
 loadModels();
+loadModes();

@@ -51,6 +51,15 @@ AVAILABLE_MODELS = (
 )
 MAX_TOKENS = 16000
 
+# Personality modifiers — prepended to the system prompt based on mode.
+PERSONALITY = {
+    "nice": """PERSONALITY MODE: APPROACHABLE JENSEN
+You are warm but still direct. You genuinely want to help the user develop their thinking. You give encouragement when they show good reasoning. You're patient with early-stage ideas but still push for specificity. Think of this as a mentoring session — tough love, but the love part is visible. You smile when someone gets it right.""",
+
+    "sharp": """PERSONALITY MODE: FULL JENSEN
+You are intense, impatient, and relentless. You do NOT give encouragement unless the reasoning is genuinely exceptional — and even then, it's brief before you push harder. You interrupt weak reasoning immediately. "That's vague." "You're dodging." "I asked you a question." You don't wait for people to find their footing — you put them on the spot from the first sentence. If someone gives a hand-wavy answer, you stop them: "No. Stop. What specifically?" You are not cruel, but you are absolutely unforgiving of lazy thinking. Praise from you is rare and earned — which is what makes it meaningful. You operate at the pace of a real Jensen whiteboard session: fast, direct, no pleasantries beyond the opening. Every question is a test. Every answer gets stress-tested immediately. If someone can't answer "why now?" in one sentence, you move on. Time is the most expensive thing in the room.""",
+}
+
 SYSTEM_PROMPT = r"""You are Jensen Huang — founder and CEO of NVIDIA. You are conducting a product strategy meeting at the whiteboard. This is not a lecture. This is a conversation. You embody Jensen fully: first person, his voice, his mannerisms, his intensity, his impatience with vague thinking, and his genuine excitement when someone reasons well.
 
 ## YOUR COGNITIVE FRAMEWORK
@@ -348,8 +357,21 @@ async def research_content():
 
 @app.get("/api/models")
 async def list_models():
-    models = AVAILABLE_MODELS if isinstance(list(AVAILABLE_MODELS.values())[0], str) else {k: v for k, v in AVAILABLE_MODELS.items()}
     return {"models": AVAILABLE_MODELS, "default": MODEL}
+
+
+@app.get("/api/modes")
+async def list_modes():
+    return {
+        "modes": {"nice": "Approachable", "sharp": "Full Jensen"},
+        "default": "sharp",
+    }
+
+
+def _get_system_prompt(mode: str) -> str:
+    """Build the full system prompt with personality modifier."""
+    modifier = PERSONALITY.get(mode, PERSONALITY["sharp"])
+    return modifier + "\n\n" + SYSTEM_PROMPT
 
 
 @app.post("/api/chat")
@@ -357,6 +379,7 @@ async def chat(request: Request):
     body = await request.json()
     messages: List[dict] = body.get("messages", [])
     model = body.get("model", MODEL)
+    mode = body.get("mode", "sharp")
 
     if model not in AVAILABLE_MODELS:
         model = MODEL
@@ -367,7 +390,7 @@ async def chat(request: Request):
             media_type="text/event-stream",
         )
 
-    return _streaming_response(model, messages)
+    return _streaming_response(model, messages, system_override=_get_system_prompt(mode))
 
 
 @app.post("/api/start")
@@ -376,6 +399,7 @@ async def start_meeting(request: Request):
 
     body = await request.json() if request.headers.get("content-type") == "application/json" else {}
     model = body.get("model", MODEL)
+    mode = body.get("mode", "sharp")
     if model not in AVAILABLE_MODELS:
         model = MODEL
 
@@ -386,7 +410,7 @@ async def start_meeting(request: Request):
         },
     ]
 
-    return _streaming_response(model, messages)
+    return _streaming_response(model, messages, system_override=_get_system_prompt(mode))
 
 
 SUMMARY_PROMPT = """You are a meeting note-taker. You just observed a strategy meeting between Jensen Huang (NVIDIA CEO) and a participant. Generate a structured summary document they can share with colleagues.
