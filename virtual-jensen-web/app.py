@@ -1,6 +1,10 @@
 """
 Strategy Meeting with Jensen Huang — FastAPI Backend
-Streams Claude responses via SSE using the Anthropic SDK.
+Streams Claude responses via SSE.
+
+Supports two modes via environment variables:
+  - ANTHROPIC_API_KEY          → Anthropic SDK (native, with prompt caching + adaptive thinking)
+  - API_BASE_URL + API_KEY     → Any OpenAI-compatible endpoint (NVIDIA NIM, Bedrock, etc.)
 """
 
 import os
@@ -10,21 +14,40 @@ from typing import List
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
-import anthropic
 
 app = FastAPI(title="Strategy Meeting with Jensen Huang")
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Anthropic client (uses ANTHROPIC_API_KEY env var)
-client = anthropic.AsyncAnthropic()
+# --- Provider detection ---
+# If API_BASE_URL is set, use OpenAI-compatible client (NVIDIA, Bedrock, etc.)
+# Otherwise, use the native Anthropic SDK.
+API_BASE_URL = os.environ.get("API_BASE_URL", "")
+API_KEY = os.environ.get("API_KEY", "")
+USE_ANTHROPIC = not API_BASE_URL
 
-MODEL = os.environ.get("JENSEN_MODEL", "claude-opus-4-6")
-AVAILABLE_MODELS = {
-    "claude-opus-4-6": "Claude Opus 4.6",
-    "claude-sonnet-4-6": "Claude Sonnet 4.6",
-}
+if USE_ANTHROPIC:
+    import anthropic
+    aclient = anthropic.AsyncAnthropic()
+else:
+    from openai import AsyncOpenAI
+    oai_client = AsyncOpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+MODEL = os.environ.get(
+    "JENSEN_MODEL",
+    "claude-opus-4-6" if USE_ANTHROPIC else "aws/anthropic/bedrock-claude-opus-4-6",
+)
+AVAILABLE_MODELS = (
+    {
+        "claude-opus-4-6": "Claude Opus 4.6",
+        "claude-sonnet-4-6": "Claude Sonnet 4.6",
+    }
+    if USE_ANTHROPIC
+    else {
+        "aws/anthropic/bedrock-claude-opus-4-6": "Claude Opus 4.6",
+    }
+)
 MAX_TOKENS = 16000
 
 SYSTEM_PROMPT = r"""You are Jensen Huang — founder and CEO of NVIDIA. You are conducting a product strategy meeting at the whiteboard. This is not a lecture. This is a conversation. You embody Jensen fully: first person, his voice, his mannerisms, his intensity, his impatience with vague thinking, and his genuine excitement when someone reasons well.
@@ -294,13 +317,14 @@ This is your institutional memory. Use it as a starting point for product and co
 
 This knowledge base was last updated 2026-04-09. For fast-moving topics (pricing, earnings, availability, latest announcements), note the vintage and caveat appropriately. Prefer structural reasoning over point-in-time data when uncertain about freshness."""
 
-# System prompt as a cached block — the prompt is large and stable across requests,
-# so prompt caching saves ~90% on input tokens after the first request.
-SYSTEM_BLOCKS = [{
-    "type": "text",
-    "text": SYSTEM_PROMPT,
-    "cache_control": {"type": "ephemeral"},
-}]
+# For Anthropic native: cached system block (saves ~90% on input tokens).
+# For OpenAI-compatible: system prompt is passed as a message.
+if USE_ANTHROPIC:
+    SYSTEM_BLOCKS = [{
+        "type": "text",
+        "text": SYSTEM_PROMPT,
+        "cache_control": {"type": "ephemeral"},
+    }]
 
 
 @app.get("/")
@@ -323,6 +347,7 @@ async def research_content():
 
 @app.get("/api/models")
 async def list_models():
+    models = AVAILABLE_MODELS if isinstance(list(AVAILABLE_MODELS.values())[0], str) else {k: v for k, v in AVAILABLE_MODELS.items()}
     return {"models": AVAILABLE_MODELS, "default": MODEL}
 
 
@@ -341,32 +366,7 @@ async def chat(request: Request):
             media_type="text/event-stream",
         )
 
-    async def generate():
-        try:
-            async with client.messages.stream(
-                model=model,
-                max_tokens=MAX_TOKENS,
-                system=SYSTEM_BLOCKS,
-                thinking={"type": "adaptive"},
-                messages=messages,
-            ) as stream:
-                async for text in stream.text_stream:
-                    data = json.dumps({"text": text})
-                    yield f"data: {data}\n\n"
-            yield "data: {\"done\": true}\n\n"
-        except Exception as e:
-            error_data = json.dumps({"error": str(e)})
-            yield f"data: {error_data}\n\n"
-
-    return StreamingResponse(
-        content=generate(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
+    return _streaming_response(model, messages)
 
 
 @app.post("/api/start")
@@ -385,25 +385,51 @@ async def start_meeting(request: Request):
         },
     ]
 
-    async def generate():
-        try:
-            async with client.messages.stream(
-                model=model,
-                max_tokens=MAX_TOKENS,
-                system=SYSTEM_BLOCKS,
-                thinking={"type": "adaptive"},
-                messages=messages,
-            ) as stream:
-                async for text in stream.text_stream:
-                    data = json.dumps({"text": text})
-                    yield f"data: {data}\n\n"
-            yield "data: {\"done\": true}\n\n"
-        except Exception as e:
-            error_data = json.dumps({"error": str(e)})
-            yield f"data: {error_data}\n\n"
+    return _streaming_response(model, messages)
+
+
+# --- Shared streaming logic ---
+
+def _streaming_response(model: str, messages: List[dict]):
+    """Return a StreamingResponse that works with either provider."""
+
+    if USE_ANTHROPIC:
+        async def generate_anthropic():
+            try:
+                async with aclient.messages.stream(
+                    model=model,
+                    max_tokens=MAX_TOKENS,
+                    system=SYSTEM_BLOCKS,
+                    thinking={"type": "adaptive"},
+                    messages=messages,
+                ) as stream:
+                    async for text in stream.text_stream:
+                        yield f"data: {json.dumps({'text': text})}\n\n"
+                yield "data: {\"done\": true}\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+        gen = generate_anthropic()
+    else:
+        async def generate_openai():
+            try:
+                stream = await oai_client.chat.completions.create(
+                    model=model,
+                    max_tokens=MAX_TOKENS,
+                    messages=[{"role": "system", "content": SYSTEM_PROMPT}] + messages,
+                    stream=True,
+                )
+                async for chunk in stream:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        yield f"data: {json.dumps({'text': chunk.choices[0].delta.content})}\n\n"
+                yield "data: {\"done\": true}\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+        gen = generate_openai()
 
     return StreamingResponse(
-        content=generate(),
+        content=gen,
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
