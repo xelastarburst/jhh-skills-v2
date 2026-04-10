@@ -230,6 +230,39 @@ body::before {
     font-style: italic;
 }
 
+.mode-picker {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.mode-picker select {
+    background: var(--bg-elevated);
+    color: var(--accent);
+    border: 1px solid rgba(118, 185, 0, 0.3);
+    border-radius: 100px;
+    padding: 8px 20px;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+    text-align: center;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: all 0.2s var(--ease-smooth);
+}
+
+.mode-picker select:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+}
+
+.mode-picker select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(118, 185, 0, 0.1);
+}
+
 .welcome-desc {
     font-size: 0.9rem;
     font-weight: 400;

@@ -363,7 +363,7 @@ async def list_models():
 @app.get("/api/modes")
 async def list_modes():
     return {
-        "modes": {"nice": "Approachable", "sharp": "Full Jensen"},
+        "modes": {"nice": "Approachable Jensen", "sharp": "Intense Jensen"},
         "default": "sharp",
     }
 
