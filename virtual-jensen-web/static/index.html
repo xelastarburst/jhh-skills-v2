@@ -4,49 +4,62 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Strategy Meeting with Jensen Huang</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Outfit:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧥</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect x=%2215%22 y=%2215%22 width=%2270%22 height=%2270%22 fill=%22%2376b900%22/%3E</svg>">
 </head>
 <body>
+    <div class="noise"></div>
     <div class="app">
         <header class="header">
-            <h1><span class="nvidia-green">■</span> Strategy Meeting with Jensen Huang</h1>
-            <div class="subtitle">No slides. No status reports. Just the whiteboard. · <a href="/research" class="research-link">View Research Sources</a></div>
-            <div class="model-selector">
-                <label for="model-select">Model:</label>
-                <select id="model-select"></select>
+            <div class="brand">
+                <span class="brand-mark"></span>
+                <span class="brand-text">Virtual Jensen</span>
+            </div>
+            <div class="header-right">
+                <select id="model-select" aria-label="Model"></select>
+                <a href="/research" class="header-link">Sources</a>
             </div>
         </header>
 
         <div class="chat-container" id="chat-container">
             <div class="welcome" id="welcome">
-                <div class="icon"><img src="/static/jensen-avatar.svg" alt="Jensen" style="width:80px;height:80px"></div>
-                <p>
-                    Step into a strategy meeting with Jensen Huang.
-                    Bring your product idea — he'll stress-test your thinking
-                    through first principles, reasoning chains, and the
-                    relentless pursuit of the speed of light.
-                </p>
-                <button class="start-btn" id="start-btn">Enter the Meeting Room</button>
+                <div class="welcome-inner">
+                    <div class="welcome-badge">Strategy Session</div>
+                    <h1 class="welcome-title">
+                        <span class="welcome-pre">A meeting with</span>
+                        Jensen Huang
+                    </h1>
+                    <p class="welcome-desc">
+                        No slides. No status reports. Just the whiteboard.<br>
+                        Bring your product idea &mdash; he'll stress-test your thinking
+                        through first principles, reasoning chains, and the relentless
+                        pursuit of the speed of light.
+                    </p>
+                    <button class="start-btn" id="start-btn">
+                        Enter the Room
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </button>
+                </div>
             </div>
         </div>
 
         <div class="input-area">
-            <div class="input-wrapper">
+            <div class="input-row">
                 <textarea
                     id="message-input"
                     placeholder="Share your thinking..."
                     rows="1"
                     disabled
                 ></textarea>
-                <button id="send-btn" disabled>
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                    </svg>
+                <button id="send-btn" disabled aria-label="Send">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                 </button>
             </div>
-            <div class="new-meeting">
-                <button id="new-meeting-btn">↻ New Meeting</button>
+            <div class="input-footer">
+                <button id="new-meeting-btn">New Meeting</button>
             </div>
         </div>
     </div>

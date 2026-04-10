@@ -10,7 +10,6 @@ const startBtn = document.getElementById('start-btn');
 const newMeetingBtn = document.getElementById('new-meeting-btn');
 const modelSelect = document.getElementById('model-select');
 
-// Conversation history sent to backend
 let conversationHistory = [];
 let isStreaming = false;
 let selectedModel = '';
@@ -40,7 +39,6 @@ modelSelect.addEventListener('change', () => {
 
 // --- Markdown rendering (lightweight) ---
 function renderMarkdown(text) {
-    // Escape HTML
     let html = text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -77,7 +75,7 @@ function renderMarkdown(text) {
     html = html.replace(/\n\n+/g, '</p><p>');
     html = '<p>' + html + '</p>';
 
-    // Clean up empty paragraphs
+    // Clean up
     html = html.replace(/<p>\s*<\/p>/g, '');
     html = html.replace(/<p>(<h[23]>)/g, '$1');
     html = html.replace(/(<\/h[23]>)<\/p>/g, '$1');
@@ -89,68 +87,62 @@ function renderMarkdown(text) {
 
 // --- Message rendering ---
 function addMessage(role, content) {
-    // Remove welcome screen if present
-    if (welcomeScreen) {
-        welcomeScreen.style.display = 'none';
-    }
+    if (welcomeScreen) welcomeScreen.style.display = 'none';
 
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${role}`;
 
-    const avatar = document.createElement('div');
-    avatar.className = 'avatar';
+    const label = document.createElement('div');
+    label.className = 'message-label';
+
     if (role === 'jensen') {
-        avatar.innerHTML = '<img src="/static/jensen-avatar.svg" alt="Jensen" style="width:28px;height:28px">';
+        label.innerHTML = `<img src="/static/jensen-avatar.svg" alt="" class="msg-avatar"><span>Jensen</span>`;
     } else {
-        avatar.textContent = '💬';
+        label.innerHTML = `<span>You</span>`;
     }
 
-    const bubble = document.createElement('div');
-    bubble.className = 'bubble';
-    bubble.innerHTML = renderMarkdown(content);
+    const body = document.createElement('div');
+    body.className = 'message-content';
+    body.innerHTML = renderMarkdown(content);
 
-    msgDiv.appendChild(avatar);
-    msgDiv.appendChild(bubble);
+    msgDiv.appendChild(label);
+    msgDiv.appendChild(body);
     chatContainer.appendChild(msgDiv);
     scrollToBottom();
 
-    return bubble;
+    return body;
 }
 
 function createStreamingMessage() {
-    if (welcomeScreen) {
-        welcomeScreen.style.display = 'none';
-    }
+    if (welcomeScreen) welcomeScreen.style.display = 'none';
 
     const msgDiv = document.createElement('div');
     msgDiv.className = 'message jensen';
 
-    const avatar = document.createElement('div');
-    avatar.className = 'avatar';
-    avatar.innerHTML = '<img src="/static/jensen-avatar.svg" alt="Jensen" style="width:28px;height:28px">';
+    const label = document.createElement('div');
+    label.className = 'message-label';
+    label.innerHTML = `<img src="/static/jensen-avatar.svg" alt="" class="msg-avatar"><span>Jensen</span>`;
 
-    const bubble = document.createElement('div');
-    bubble.className = 'bubble';
-    bubble.innerHTML = '<p></p>';
+    const body = document.createElement('div');
+    body.className = 'message-content';
+    body.innerHTML = '<p></p>';
 
-    msgDiv.appendChild(avatar);
-    msgDiv.appendChild(bubble);
+    msgDiv.appendChild(label);
+    msgDiv.appendChild(body);
     chatContainer.appendChild(msgDiv);
 
-    return bubble;
+    return body;
 }
 
 function showThinking() {
-    const thinking = document.createElement('div');
-    thinking.className = 'thinking';
-    thinking.id = 'thinking-indicator';
-    thinking.innerHTML = `
-        <div class="dots">
-            <span></span><span></span><span></span>
-        </div>
-        <span>Jensen is thinking...</span>
+    const el = document.createElement('div');
+    el.className = 'thinking';
+    el.id = 'thinking-indicator';
+    el.innerHTML = `
+        <div class="thinking-pulse"><span></span><span></span><span></span></div>
+        <span class="thinking-text">Jensen is thinking...</span>
     `;
-    chatContainer.appendChild(thinking);
+    chatContainer.appendChild(el);
     scrollToBottom();
 }
 
@@ -166,9 +158,7 @@ function scrollToBottom() {
 function setInputEnabled(enabled) {
     messageInput.disabled = !enabled;
     sendBtn.disabled = !enabled;
-    if (enabled) {
-        messageInput.focus();
-    }
+    if (enabled) messageInput.focus();
 }
 
 // --- SSE streaming ---
@@ -181,13 +171,11 @@ async function streamResponse(url, body = null) {
     let bubble = null;
 
     try {
-        const options = {
-            method: body ? 'POST' : 'POST',
+        const response = await fetch(url, {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body || {}),
-        };
-
-        const response = await fetch(url, options);
+        });
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -208,25 +196,22 @@ async function streamResponse(url, body = null) {
             for (const line of lines) {
                 if (!line.startsWith('data: ')) continue;
 
-                const jsonStr = line.slice(6);
                 let data;
                 try {
-                    data = JSON.parse(jsonStr);
+                    data = JSON.parse(line.slice(6));
                 } catch {
                     continue;
                 }
 
                 if (data.error) {
                     hideThinking();
-                    addMessage('jensen', `⚠️ Error: ${data.error}`);
+                    addMessage('jensen', `Error: ${data.error}`);
                     isStreaming = false;
                     setInputEnabled(true);
                     return null;
                 }
 
-                if (data.done) {
-                    break;
-                }
+                if (data.done) break;
 
                 if (data.text) {
                     if (!bubble) {
@@ -241,7 +226,7 @@ async function streamResponse(url, body = null) {
         }
     } catch (err) {
         hideThinking();
-        addMessage('jensen', `⚠️ Connection error: ${err.message}`);
+        addMessage('jensen', `Connection error: ${err.message}`);
         isStreaming = false;
         setInputEnabled(true);
         return null;
@@ -260,7 +245,6 @@ async function startMeeting() {
     const jensenText = await streamResponse('/api/start', { model: selectedModel });
 
     if (jensenText) {
-        // Store the opening exchange in history
         conversationHistory.push({
             role: 'user',
             content: '[The user has just entered the strategy meeting room. Jensen is at the whiteboard. Open the meeting in character — set the scene and invite them to share what they\'re building.]'
@@ -281,7 +265,6 @@ async function sendMessage() {
     messageInput.style.height = 'auto';
 
     addMessage('user', text);
-
     conversationHistory.push({ role: 'user', content: text });
 
     const jensenText = await streamResponse('/api/chat', {
@@ -314,7 +297,6 @@ messageInput.addEventListener('keydown', (e) => {
     }
 });
 
-// Auto-resize textarea
 messageInput.addEventListener('input', () => {
     messageInput.style.height = 'auto';
     messageInput.style.height = Math.min(messageInput.scrollHeight, 160) + 'px';
@@ -323,5 +305,4 @@ messageInput.addEventListener('input', () => {
 startBtn.addEventListener('click', startMeeting);
 newMeetingBtn.addEventListener('click', newMeeting);
 
-// Load models on startup
 loadModels();
