@@ -9,6 +9,7 @@ Supports two modes via environment variables:
 
 import os
 import json
+import asyncio
 from typing import List
 
 from fastapi import FastAPI, Request
@@ -393,9 +394,14 @@ async def start_meeting(request: Request):
 def _streaming_response(model: str, messages: List[dict]):
     """Return a StreamingResponse that works with either provider."""
 
+    # SSE heartbeat keeps VPN/proxy connections alive while waiting
+    # for the first token (adaptive thinking can take 10-30s).
+    HEARTBEAT = ": heartbeat\n\n"
+
     if USE_ANTHROPIC:
         async def generate_anthropic():
             try:
+                got_data = False
                 async with aclient.messages.stream(
                     model=model,
                     max_tokens=MAX_TOKENS,
@@ -404,6 +410,7 @@ def _streaming_response(model: str, messages: List[dict]):
                     messages=messages,
                 ) as stream:
                     async for text in stream.text_stream:
+                        got_data = True
                         yield f"data: {json.dumps({'text': text})}\n\n"
                 yield "data: {\"done\": true}\n\n"
             except Exception as e:
@@ -413,17 +420,41 @@ def _streaming_response(model: str, messages: List[dict]):
     else:
         async def generate_openai():
             try:
-                stream = await oai_client.chat.completions.create(
-                    model=model,
-                    max_tokens=MAX_TOKENS,
-                    messages=[{"role": "system", "content": SYSTEM_PROMPT}] + messages,
-                    stream=True,
-                )
-                async for chunk in stream:
-                    if chunk.choices and chunk.choices[0].delta.content:
-                        yield f"data: {json.dumps({'text': chunk.choices[0].delta.content})}\n\n"
+                heartbeat_task = None
+                q = asyncio.Queue()
+
+                async def send_heartbeats():
+                    """Send SSE comments every 15s to keep connection alive."""
+                    while True:
+                        await asyncio.sleep(15)
+                        await q.put(HEARTBEAT)
+
+                async def stream_response():
+                    stream = await oai_client.chat.completions.create(
+                        model=model,
+                        max_tokens=MAX_TOKENS,
+                        messages=[{"role": "system", "content": SYSTEM_PROMPT}] + messages,
+                        stream=True,
+                    )
+                    async for chunk in stream:
+                        if chunk.choices and chunk.choices[0].delta.content:
+                            await q.put(f"data: {json.dumps({'text': chunk.choices[0].delta.content})}\n\n")
+                    await q.put(None)  # signal done
+
+                heartbeat_task = asyncio.create_task(send_heartbeats())
+                stream_task = asyncio.create_task(stream_response())
+
+                while True:
+                    item = await q.get()
+                    if item is None:
+                        break
+                    yield item
+
+                heartbeat_task.cancel()
                 yield "data: {\"done\": true}\n\n"
             except Exception as e:
+                if heartbeat_task:
+                    heartbeat_task.cancel()
                 yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
         gen = generate_openai()
