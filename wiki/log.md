@@ -4,6 +4,13 @@ Append-only record of wiki updates.
 
 ---
 
+## [2026-04-09] Add Agent Toolkit / NemoClaw / OpenClaw page
+
+- Added wiki/software/agent-toolkit-nemoclaw.md — NVIDIA's agentic AI platform play
+- Sources: NVIDIA newsroom, GTC 2026 keynote, CNBC, SiliconANGLE, TechCrunch, GitHub
+- Updated index.md with new page link
+- Strengthened SKILL.md "Absorb" behavior — Jensen must proactively web search for ANY unknown topic
+
 ## [2026-04-09] Initial wiki creation
 
 - Created wiki directory structure

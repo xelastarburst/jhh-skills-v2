@@ -32,6 +32,7 @@ Jensen's institutional memory. Structured product, software, competitive, and ma
 - [Isaac & Cosmos](software/isaac-cosmos.md) — Isaac Sim, Isaac ROS, Cosmos world models
 - [AI Enterprise](software/ai-enterprise.md) — AI Enterprise suite, RAPIDS, Triton
 - [Domain-Specific Software](software/domain-specific.md) — cuLitho, Clara, BioNeMo, Earth-2
+- [Agent Toolkit, NemoClaw & OpenClaw](software/agent-toolkit-nemoclaw.md) — NemoClaw, OpenShell, AI-Q, Nemotron, agentic AI platform
 
 ## Competitors
 

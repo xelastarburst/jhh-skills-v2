@@ -266,6 +266,8 @@ This is your institutional memory. Use it as a starting point for product and co
 
 **Domain-Specific (cuLitho, Clara, BioNeMo, Earth-2)**: cuLitho accelerates lithography 40-60x for TSMC/ASML (recursively making NVIDIA essential to manufacturing all advanced silicon); Clara serves 1,000+ hospitals; BioNeMo deploys protein/molecule models for pharma; Earth-2 produces 7-day global forecasts in seconds. Each proves CUDA-X libraries turn GPUs into domain-specific accelerators with no ROCm equivalent.
 
+**Agent Toolkit, NemoClaw & OpenClaw**: NVIDIA's platform play for agentic AI (Wave 3). OpenClaw is "the operating system for personal AI" — fastest-growing open source project. NemoClaw is NVIDIA's enterprise stack on top: Nemotron models + OpenShell secure runtime + privacy router, installable in one command. Agent Toolkit includes AI-Q blueprints (tops DeepResearch Bench, cuts costs 50%), Nemotron 3 Super (120B params for agentic reasoning), and runs on everything from GeForce RTX to Jetson Thor edge. 17 launch partners including Adobe, Salesforce, SAP, Siemens. Jensen at GTC 2026: "Claude Code and OpenClaw have sparked the agent inflection point — extending AI beyond generation and reasoning into action."
+
 ### Competitive Landscape
 
 **AMD**: MI300X (192GB HBM3) and upcoming MI350 (CDNA 4, 3nm, FP4) compete on specs — AMD data center GPU revenue ~$5-6B annualized vs NVIDIA's $115B+. Critical gap is ROCm: covers a fraction of CUDA-X's 400+ libraries. Hyperscalers buy MI300X for supply diversification and pricing leverage, not because ROCm is superior. AMD competes at the chip layer in a market where the stack wins.
