@@ -472,11 +472,11 @@ body::before {
 
 .input-row textarea {
     flex: 1;
-    background: #1e222d;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: #282d3a;
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: var(--radius);
     padding: 13px 18px;
-    color: var(--text-primary);
+    color: #f0f0f0;
     font-family: var(--font-body);
     font-size: 0.88rem;
     font-weight: 400;
@@ -489,12 +489,12 @@ body::before {
 }
 
 .input-row textarea:focus {
-    border-color: rgba(118, 185, 0, 0.4);
-    box-shadow: 0 0 0 3px rgba(118, 185, 0, 0.08);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(118, 185, 0, 0.12);
 }
 
 .input-row textarea::placeholder {
-    color: #888;
+    color: #aaa;
     font-weight: 300;
 }
 
