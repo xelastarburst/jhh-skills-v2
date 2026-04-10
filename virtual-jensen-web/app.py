@@ -1,6 +1,6 @@
 """
 Strategy Meeting with Jensen Huang — FastAPI Backend
-Streams Claude responses via SSE to create an interactive strategy meeting experience.
+Streams Claude responses via SSE using the Anthropic SDK.
 """
 
 import os
@@ -10,40 +10,22 @@ from typing import List
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
-from openai import OpenAI
+import anthropic
 
 app = FastAPI(title="Strategy Meeting with Jensen Huang")
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# NVIDIA NIM API (for NIM catalog models)
-nim_client = OpenAI(
-    base_url="https://integrate.api.nvidia.com/v1",
-    api_key=os.environ.get("NVIDIA_NIM_KEY", os.environ.get("NVIDIA_API_KEY")),
-)
+# Anthropic client (uses ANTHROPIC_API_KEY env var)
+client = anthropic.AsyncAnthropic()
 
-# NVIDIA Inference API (for Bedrock/Claude models)
-inference_client = OpenAI(
-    base_url="https://inference-api.nvidia.com/v1",
-    api_key=os.environ.get("NVIDIA_API_KEY"),
-)
-
-MODEL = os.environ.get("JENSEN_MODEL", "aws/anthropic/bedrock-claude-opus-4-6")
+MODEL = os.environ.get("JENSEN_MODEL", "claude-opus-4-6")
 AVAILABLE_MODELS = {
-    "nvidia/nemotron-3-super-120b-a12b": {"name": "Nemotron 3 Super 120B", "provider": "nim"},
-    "moonshotai/kimi-k2.5": {"name": "Kimi K2.5", "provider": "nim"},
-    "aws/anthropic/bedrock-claude-opus-4-6": {"name": "Claude Opus 4.6", "provider": "inference"},
+    "claude-opus-4-6": "Claude Opus 4.6",
+    "claude-sonnet-4-6": "Claude Sonnet 4.6",
 }
-MAX_TOKENS = 4096
-
-
-def get_client(model: str):
-    """Return the right OpenAI client for a given model."""
-    info = AVAILABLE_MODELS.get(model, {})
-    if info.get("provider") == "inference":
-        return inference_client
-    return nim_client
+MAX_TOKENS = 16000
 
 SYSTEM_PROMPT = r"""You are Jensen Huang — founder and CEO of NVIDIA. You are conducting a product strategy meeting at the whiteboard. This is not a lecture. This is a conversation. You embody Jensen fully: first person, his voice, his mannerisms, his intensity, his impatience with vague thinking, and his genuine excitement when someone reasons well.
 
@@ -312,6 +294,14 @@ This is your institutional memory. Use it as a starting point for product and co
 
 This knowledge base was last updated 2026-04-09. For fast-moving topics (pricing, earnings, availability, latest announcements), note the vintage and caveat appropriately. Prefer structural reasoning over point-in-time data when uncertain about freshness."""
 
+# System prompt as a cached block — the prompt is large and stable across requests,
+# so prompt caching saves ~90% on input tokens after the first request.
+SYSTEM_BLOCKS = [{
+    "type": "text",
+    "text": SYSTEM_PROMPT,
+    "cache_control": {"type": "ephemeral"},
+}]
+
 
 @app.get("/")
 async def index():
@@ -333,8 +323,7 @@ async def research_content():
 
 @app.get("/api/models")
 async def list_models():
-    models = {k: v["name"] for k, v in AVAILABLE_MODELS.items()}
-    return {"models": models, "default": MODEL}
+    return {"models": AVAILABLE_MODELS, "default": MODEL}
 
 
 @app.post("/api/chat")
@@ -343,11 +332,9 @@ async def chat(request: Request):
     messages: List[dict] = body.get("messages", [])
     model = body.get("model", MODEL)
 
-    # Validate model
     if model not in AVAILABLE_MODELS:
         model = MODEL
 
-    # If this is the first message (no history), prepend Jensen's opening
     if len(messages) == 0:
         return StreamingResponse(
             content=iter(["data: {\"error\": \"No messages provided\"}\n\n"]),
@@ -356,16 +343,14 @@ async def chat(request: Request):
 
     async def generate():
         try:
-            api_client = get_client(model)
-            stream = api_client.chat.completions.create(
+            async with client.messages.stream(
                 model=model,
                 max_tokens=MAX_TOKENS,
-                messages=[{"role": "system", "content": SYSTEM_PROMPT}] + messages,
-                stream=True,
-            )
-            for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    text = chunk.choices[0].delta.content
+                system=SYSTEM_BLOCKS,
+                thinking={"type": "adaptive"},
+                messages=messages,
+            ) as stream:
+                async for text in stream.text_stream:
                     data = json.dumps({"text": text})
                     yield f"data: {data}\n\n"
             yield "data: {\"done\": true}\n\n"
@@ -394,7 +379,6 @@ async def start_meeting(request: Request):
         model = MODEL
 
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
         {
             "role": "user",
             "content": "[The user has just entered the strategy meeting room. Jensen is at the whiteboard. Open the meeting in character — set the scene and invite them to share what they're building.]",
@@ -403,16 +387,14 @@ async def start_meeting(request: Request):
 
     async def generate():
         try:
-            api_client = get_client(model)
-            stream = api_client.chat.completions.create(
+            async with client.messages.stream(
                 model=model,
                 max_tokens=MAX_TOKENS,
+                system=SYSTEM_BLOCKS,
+                thinking={"type": "adaptive"},
                 messages=messages,
-                stream=True,
-            )
-            for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    text = chunk.choices[0].delta.content
+            ) as stream:
+                async for text in stream.text_stream:
                     data = json.dumps({"text": text})
                     yield f"data: {data}\n\n"
             yield "data: {\"done\": true}\n\n"
