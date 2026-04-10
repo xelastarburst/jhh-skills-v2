@@ -389,23 +389,91 @@ async def start_meeting(request: Request):
     return _streaming_response(model, messages)
 
 
+SUMMARY_PROMPT = """You are a meeting note-taker. You just observed a strategy meeting between Jensen Huang (NVIDIA CEO) and a participant. Generate a structured summary document they can share with colleagues.
+
+Format the output as markdown:
+
+# Strategy Meeting Summary
+**Date:** [today's date]
+**Facilitator:** Jensen Huang (Virtual)
+
+## Topic
+[One-line description of what was discussed]
+
+## Key Insights
+[3-5 bullet points — the most important things Jensen said or the participant realized]
+
+## Reasoning Chain
+[The logical chain that emerged during the meeting — if A, then B, then C...]
+
+## Assumptions to Test
+[Key assumptions surfaced during the meeting that need validation]
+
+## Action Items
+[Concrete next steps that came out of the meeting]
+
+## Jensen's Assessment
+[Brief assessment of the strength of the reasoning — where it was sharp, where it needs work]
+
+---
+*Generated from a Virtual Jensen strategy session*
+
+Be concise. Use the actual content of the conversation — don't invent things that weren't discussed."""
+
+
+@app.post("/api/summary")
+async def generate_summary(request: Request):
+    """Generate a shareable summary document from the conversation."""
+    body = await request.json()
+    messages: List[dict] = body.get("messages", [])
+    model = body.get("model", MODEL)
+
+    if model not in AVAILABLE_MODELS:
+        model = MODEL
+
+    if len(messages) == 0:
+        return StreamingResponse(
+            content=iter(["data: {\"error\": \"No conversation to summarize\"}\n\n"]),
+            media_type="text/event-stream",
+        )
+
+    summary_messages = [
+        {
+            "role": "user",
+            "content": "Here is the full conversation from the strategy meeting:\n\n"
+            + "\n\n".join(
+                f"**{'Jensen' if m['role'] == 'assistant' else 'Participant'}:** {m['content']}"
+                for m in messages
+                if m["role"] in ("user", "assistant")
+            )
+            + "\n\nPlease generate the summary document now.",
+        },
+    ]
+
+    return _streaming_response(model, summary_messages, system_override=SUMMARY_PROMPT)
+
+
 # --- Shared streaming logic ---
 
-def _streaming_response(model: str, messages: List[dict]):
+def _streaming_response(model: str, messages: List[dict], system_override: str = None):
     """Return a StreamingResponse that works with either provider."""
+
+    sys_text = system_override or SYSTEM_PROMPT
 
     # SSE heartbeat keeps VPN/proxy connections alive while waiting
     # for the first token (adaptive thinking can take 10-30s).
     HEARTBEAT = ": heartbeat\n\n"
 
     if USE_ANTHROPIC:
+        sys_blocks = [{"type": "text", "text": sys_text, "cache_control": {"type": "ephemeral"}}] if not system_override else [{"type": "text", "text": sys_text}]
+
         async def generate_anthropic():
             try:
                 got_data = False
                 async with aclient.messages.stream(
                     model=model,
                     max_tokens=MAX_TOKENS,
-                    system=SYSTEM_BLOCKS,
+                    system=sys_blocks,
                     thinking={"type": "adaptive"},
                     messages=messages,
                 ) as stream:
@@ -433,7 +501,7 @@ def _streaming_response(model: str, messages: List[dict]):
                     stream = await oai_client.chat.completions.create(
                         model=model,
                         max_tokens=MAX_TOKENS,
-                        messages=[{"role": "system", "content": SYSTEM_PROMPT}] + messages,
+                        messages=[{"role": "system", "content": sys_text}] + messages,
                         stream=True,
                     )
                     async for chunk in stream:

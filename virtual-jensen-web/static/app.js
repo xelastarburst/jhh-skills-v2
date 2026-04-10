@@ -10,9 +10,20 @@ const startBtn = document.getElementById('start-btn');
 const newMeetingBtn = document.getElementById('new-meeting-btn');
 const modelSelect = document.getElementById('model-select');
 
+const exportGroup = document.getElementById('export-group');
+const exportSummaryBtn = document.getElementById('export-summary-btn');
+const exportTranscriptBtn = document.getElementById('export-transcript-btn');
+const exportModal = document.getElementById('export-modal');
+const modalTitle = document.getElementById('modal-title');
+const modalBody = document.getElementById('modal-body');
+const modalClose = document.getElementById('modal-close');
+const modalCopy = document.getElementById('modal-copy');
+const modalDownload = document.getElementById('modal-download');
+
 let conversationHistory = [];
 let isStreaming = false;
 let selectedModel = '';
+let currentExportMarkdown = '';
 
 // --- Load available models ---
 async function loadModels() {
@@ -253,6 +264,7 @@ async function startMeeting() {
             role: 'assistant',
             content: jensenText
         });
+        showExportButtons();
     }
 }
 
@@ -281,6 +293,7 @@ async function sendMessage() {
 function newMeeting() {
     conversationHistory = [];
     chatContainer.innerHTML = '';
+    if (exportGroup) exportGroup.style.display = 'none';
     if (welcomeScreen) {
         welcomeScreen.style.display = 'flex';
         if (startBtn) startBtn.disabled = false;
@@ -304,5 +317,117 @@ messageInput.addEventListener('input', () => {
 
 startBtn.addEventListener('click', startMeeting);
 newMeetingBtn.addEventListener('click', newMeeting);
+
+// --- Export: show buttons once meeting starts ---
+function showExportButtons() {
+    if (exportGroup) exportGroup.style.display = 'flex';
+}
+
+// --- Export: full transcript ---
+function exportTranscript() {
+    const lines = conversationHistory
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .map(m => {
+            const speaker = m.role === 'assistant' ? 'Jensen' : 'You';
+            return `## ${speaker}\n\n${m.content}`;
+        });
+
+    const md = `# Strategy Meeting Transcript\n**Date:** ${new Date().toLocaleDateString()}\n\n---\n\n${lines.join('\n\n---\n\n')}`;
+    showModal('Full Transcript', md);
+}
+
+// --- Export: AI-generated summary (streamed) ---
+async function exportSummary() {
+    if (isStreaming || conversationHistory.length === 0) return;
+
+    showModal('Meeting Summary', '');
+    modalBody.innerHTML = '<p class="generating">Jensen is preparing the summary...</p>';
+
+    isStreaming = true;
+    let fullText = '';
+
+    try {
+        const response = await fetch('/api/summary', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: conversationHistory, model: selectedModel }),
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                let data;
+                try { data = JSON.parse(line.slice(6)); } catch { continue; }
+
+                if (data.error) {
+                    modalBody.innerHTML = `<p>Error: ${data.error}</p>`;
+                    isStreaming = false;
+                    return;
+                }
+                if (data.done) break;
+                if (data.text) {
+                    fullText += data.text;
+                    modalBody.innerHTML = renderMarkdown(fullText);
+                }
+            }
+        }
+    } catch (err) {
+        modalBody.innerHTML = `<p>Error: ${err.message}</p>`;
+    }
+
+    currentExportMarkdown = fullText;
+    isStreaming = false;
+}
+
+// --- Modal ---
+function showModal(title, markdown) {
+    currentExportMarkdown = markdown;
+    modalTitle.textContent = title;
+    modalBody.innerHTML = markdown ? renderMarkdown(markdown) : '';
+    exportModal.style.display = 'flex';
+}
+
+function closeModal() {
+    exportModal.style.display = 'none';
+}
+
+function copyExport() {
+    navigator.clipboard.writeText(currentExportMarkdown).then(() => {
+        const btn = modalCopy;
+        btn.textContent = 'Copied';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+    });
+}
+
+function downloadExport() {
+    const title = modalTitle.textContent.toLowerCase().replace(/\s+/g, '-');
+    const date = new Date().toISOString().slice(0, 10);
+    const filename = `jensen-${title}-${date}.md`;
+    const blob = new Blob([currentExportMarkdown], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+modalClose.addEventListener('click', closeModal);
+exportModal.addEventListener('click', (e) => { if (e.target === exportModal) closeModal(); });
+modalCopy.addEventListener('click', copyExport);
+modalDownload.addEventListener('click', downloadExport);
+exportSummaryBtn.addEventListener('click', exportSummary);
+exportTranscriptBtn.addEventListener('click', exportTranscript);
 
 loadModels();

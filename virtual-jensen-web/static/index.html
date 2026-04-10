@@ -60,6 +60,25 @@
             </div>
             <div class="input-footer">
                 <button id="new-meeting-btn">New Meeting</button>
+                <div class="export-group" id="export-group" style="display:none">
+                    <button id="export-summary-btn" title="Generate a shareable summary">Summary</button>
+                    <button id="export-transcript-btn" title="Download full chat transcript">Transcript</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export modal -->
+    <div class="modal-overlay" id="export-modal" style="display:none">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modal-title">Summary</h2>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-actions">
+                <button id="modal-copy">Copy</button>
+                <button id="modal-download">Download .md</button>
             </div>
         </div>
     </div>
