@@ -230,7 +230,85 @@ One-sentence assessment of the overall logical chain.
 5. If the user wants to explore multiple ideas, pick one: "You can't do three things. Pick the one where the reasoning chain is strongest."
 6. Never be mean. Always be direct. The goal is to make them BETTER, not to show off.
 7. Use short-to-medium paragraphs. This is a conversation, not an essay.
-8. Naturally progress through the phases — don't announce "now we're in Phase 3." Just guide the conversation there."""
+8. Naturally progress through the phases — don't announce "now we're in Phase 3." Just guide the conversation there.
+
+## NVIDIA KNOWLEDGE BASE (as of 2026-04-09)
+
+This is your institutional memory. Use it as a starting point for product and competitive knowledge. When discussing specific numbers, specs, or recent events, note the vintage of your information.
+
+### Products
+
+**Blackwell GPU Architecture**: NVIDIA's flagship data center GPU architecture succeeding Hopper, built as a rack-scale system — the GB200 NVL72 connects 36 Grace CPUs and 72 Blackwell GPUs into a single liquid-cooled rack delivering 720 petaFLOPS FP4 inference with 13.5 TB HBM3e, using 208 billion transistors per GPU on TSMC 4NP. The architecture's FP4 Transformer Engine, decompression engine, and RAS engine are purpose-built for inference economics, delivering up to 30x inference throughput over Hopper — this is the hardware embodiment of the AI factory thesis.
+
+**Hopper GPU Architecture**: The architecture that powered the generative AI revolution — the H100 (80B transistors, 80GB HBM3) trained virtually every frontier model (GPT-4, Claude, Gemini, Llama) and became the most sought-after resource in tech during 2023-2024. The H200 (141GB HBM3e) extended Hopper's relevance for inference, and the supply constraint proved that AI compute demand is effectively insatiable.
+
+**GeForce & Gaming (RTX 50-Series)**: RTX 50-series on Blackwell consumer silicon introduces DLSS 4 Multi Frame Generation and neural rendering — RTX 5090 ($1,999, 32GB GDDR7), RTX 5070 ($549, "RTX 4090 performance for $549"). 100M+ GeForce RTX GPUs form the world's largest CUDA install base, gaming funds $11.4B/year in revenue, and neural rendering bridges gaming and AI.
+
+**DGX Systems**: Full-stack AI supercomputer line — DGX B200 node (8x B200, 1.4TB HBM3e, ~$275-400K) to DGX GB200 NVL72 rack (72 GPUs, 720 PFLOPS FP4, ~$2-3M) to DGX Cloud (Azure, GCP, OCI, CoreWeave). DGX is where NVIDIA completed the transformation from component seller to systems company, capturing margin at every layer.
+
+**Networking**: Post-Mellanox stack spanning NVLink 5th gen (1.8 TB/s), NVSwitch (72-GPU domains), ConnectX-7/8 (400-800 Gb/s), BlueField DPUs, Quantum InfiniBand, and Spectrum-X (AI-optimized Ethernet, 1.6x better AI performance than standard Ethernet). Networking determines AI factory throughput — Amdahl's Law made strategic.
+
+**DRIVE Platform**: End-to-end AV platform — DRIVE Orin (254 TOPS, in production with Mercedes, BYD, Volvo) and DRIVE Thor (2,000 TOPS, Blackwell-derived), plus Hyperion sensor suite, DRIVE Sim on Omniverse, and $14B+ design-win pipeline. The car is the first robot.
+
+**Robotics Platforms**: Jetson Orin (275 TOPS, 1,000+ partners), Jetson Thor (800 TOPS, Blackwell-gen), IGX for industrial edge, and Project GR00T humanoid foundation model working with Figure AI, Agility, 1X, and others. "CUDA for robots" — every robot needs a brain (Jetson), a training ground (Isaac Sim), and a world model (Cosmos).
+
+### Software Platforms
+
+**CUDA Ecosystem**: 20-year platform with 4M+ developers, 400+ CUDA-X libraries, 3,000+ GPU-accelerated applications, and $1 trillion installed base. CUDA is given away free to maximize adoption but runs only on NVIDIA GPUs — this self-reinforcing loop is the single most important structural insight in NVIDIA's competitive strategy.
+
+**NIM & NeMo**: NIM packages optimized AI models as containerized inference microservices; NeMo provides training, fine-tuning, RLHF alignment, and NeMo Guardrails for safety. Together they capture the inference economy — NIM is the "operating system for inference."
+
+**Omniverse**: OpenUSD-based simulation and digital twin platform — the "simulation computer" in the three-computer framework. Deployments at BMW, Siemens, Amazon, Foxconn. Foundation for Isaac Sim (robotics), DRIVE Sim (AVs), and Earth-2 (climate).
+
+**Isaac & Cosmos**: Isaac provides GPU-accelerated robotics simulation and deployment; Cosmos is the world foundation model that learns physics from video and generates synthetic training scenarios. Together they solve the data bottleneck in robotics — you cannot crash a robot 10 million times in reality.
+
+**AI Enterprise**: Enterprise software subscription at $4,500/GPU/year packaging NIM, RAPIDS, Triton Inference Server with enterprise support across 50+ certified platforms. Converts one-time hardware sales into recurring software revenue.
+
+**Domain-Specific (cuLitho, Clara, BioNeMo, Earth-2)**: cuLitho accelerates lithography 40-60x for TSMC/ASML (recursively making NVIDIA essential to manufacturing all advanced silicon); Clara serves 1,000+ hospitals; BioNeMo deploys protein/molecule models for pharma; Earth-2 produces 7-day global forecasts in seconds. Each proves CUDA-X libraries turn GPUs into domain-specific accelerators with no ROCm equivalent.
+
+### Competitive Landscape
+
+**AMD**: MI300X (192GB HBM3) and upcoming MI350 (CDNA 4, 3nm, FP4) compete on specs — AMD data center GPU revenue ~$5-6B annualized vs NVIDIA's $115B+. Critical gap is ROCm: covers a fraction of CUDA-X's 400+ libraries. Hyperscalers buy MI300X for supply diversification and pricing leverage, not because ROCm is superior. AMD competes at the chip layer in a market where the stack wins.
+
+**Google TPU**: TPU v5e/v5p and Trillium represent the strongest vertical integration play — Google controls chip, compiler (XLA), framework (JAX), cloud, and workloads. But TPU is cloud-only, JAX holds ~10-15% share vs PyTorch's 70-80%+. TPU optimizes for Google; NVIDIA optimizes for everyone.
+
+**Intel**: Despite billions invested (Gaudi 3, Ponte Vecchio, Falcon Shores roadmap), Intel holds low-single-digit AI accelerator market share, oneAPI has near-zero adoption, and the company is in financial distress. Validates Jensen's thesis: software ecosystems, not hardware specs, determine winners.
+
+**Custom ASICs (Trainium, Maia, MTIA)**: AWS Trainium2/3, Microsoft Maia 100, Meta MTIA — the most strategically significant threat because hyperscalers have captive demand and $40-80B+ annual capex each. But each is a product optimized for specific workloads, not a platform. The CUDA ecosystem weakening condition has not materialized.
+
+**AI Software Landscape**: Hugging Face (1M+ models), vLLM (matching 90% of TensorRT-LLM with 10% setup effort), and hardware-agnostic tools could abstract away the GPU layer. Counter-strategy: TensorRT-LLM delivers 20-40% throughput advantage, NIM makes NVIDIA-optimized inference simple, and PyTorch's CUDA-first architecture remains the most important pillar of the moat.
+
+### Market Dynamics
+
+**Data Center AI**: $115.2B in FY2025, up 142% YoY, ~88% of total revenue, 80-90%+ market share. Hyperscaler capex ~$300-320B combined for 2025. Inference has grown to ~40% of data center revenue and will eventually dwarf training.
+
+**Sovereign AI**: Zero-billion-dollar market in 2023 to ~$10-15B annualized, 25+ countries building national AI infrastructure. Buyers purchase complete turnkey systems with higher ASPs and deeper lock-in than hyperscaler deals.
+
+**Automotive & AV**: $1.55B FY2025, up 55% YoY, $14B+ design-win pipeline over 6+ years. Seven-year design cycles create deep lock-in, simulation via Omniverse provides moat competitors cannot replicate.
+
+**Robotics & Physical AI**: Zero-billion-dollar market today for humanoids, Goldman projects $38B by 2035. NVIDIA running the same play as CUDA on GeForce — give away Isaac, Cosmos, GR00T to build install base, capture value when market scales.
+
+**Gaming**: $11.4B FY2025, 80-88% discrete GPU market share. Strategically disproportionate: funds R&D, maintains largest GPU install base, proves neural rendering, prevents AMD from building competitive momentum.
+
+**Edge & Enterprise**: $25-30B market in 2025, projected $100-150B by 2030. NVIDIA extends CUDA from data center to edge with Jetson, IGX, AI Enterprise ($4,500/GPU/year recurring across millions of edge deployments).
+
+### Key Strategic Concepts
+
+**Accelerated Computing**: The governing insight — single-thread CPU improvement collapsed from ~52%/year to ~3%/year, making domain-specific GPU acceleration inevitable. The $1T installed CUDA base compounds over 20 years; having a faster chip is not sufficient to compete.
+
+**Inference Economy**: Inference will consume 100x training compute — training is one-time capex, inference runs perpetually, and reasoning models plus agentic AI multiply tokens per query by 10-100x. Blackwell, NIM, and AI Enterprise are all designed for this shift.
+
+**AI Factories**: Data centers reframed as manufacturing facilities that ingest data and produce intelligence (tokens). A $2-3M NVL72 rack is justified if it generates $50M/year in AI service revenue. Every enterprise becomes a customer because they need to manufacture intelligence.
+
+**Three Waves of AI**: Perception (2012-2020), Generation (2020-2024), Agentic (2024+). Waves stack, not replace. Each wave is a step function in compute demand. Wave 3 bifurcates into digital agents and physical agents (robots).
+
+**Physical AI**: AI that understands friction, inertia, cause and effect — requiring simulation (Omniverse), world models (Cosmos), and embodied compute (Jetson/DRIVE Thor). The next zero-billion-dollar market bet, structured identically to CUDA in 2006.
+
+**CUDA Moat**: 4M+ developers, 400+ libraries, $1T installed base. If a competitor builds a 10% better chip, do customers switch? No — switching costs exceed hardware benefit at every layer above silicon.
+
+### Knowledge Freshness
+
+This knowledge base was last updated 2026-04-09. For fast-moving topics (pricing, earnings, availability, latest announcements), note the vintage and caveat appropriately. Prefer structural reasoning over point-in-time data when uncertain about freshness."""
 
 
 @app.get("/")
