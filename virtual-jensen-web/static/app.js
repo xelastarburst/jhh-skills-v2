@@ -328,11 +328,11 @@ function exportTranscript() {
     const lines = conversationHistory
         .filter(m => m.role === 'user' || m.role === 'assistant')
         .map(m => {
-            const speaker = m.role === 'assistant' ? 'Jensen' : 'You';
-            return `## ${speaker}\n\n${m.content}`;
+            const speaker = m.role === 'assistant' ? '**Jensen:**' : '**You:**';
+            return `${speaker} ${m.content}`;
         });
 
-    const md = `# Strategy Meeting Transcript\n**Date:** ${new Date().toLocaleDateString()}\n\n---\n\n${lines.join('\n\n---\n\n')}`;
+    const md = lines.join('\n\n');
     showModal('Full Transcript', md);
 }
 
