@@ -21,8 +21,8 @@
     --radius: 14px;
     --radius-sm: 8px;
     --max-width: 860px;
-    --font-display: 'Syne', sans-serif;
-    --font-body: 'Outfit', sans-serif;
+    --font-display: 'NVIDIA Sans', 'DM Sans', sans-serif;
+    --font-body: 'NVIDIA Sans', 'DM Sans', sans-serif;
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 }
