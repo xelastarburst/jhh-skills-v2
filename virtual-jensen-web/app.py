@@ -11,7 +11,9 @@ import os
 import json
 import asyncio
 from typing import List
+from urllib.parse import quote_plus
 
+import httpx
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
@@ -325,7 +327,17 @@ This is your institutional memory. Use it as a starting point for product and co
 
 ### Knowledge Freshness
 
-This knowledge base was last updated 2026-04-09. For fast-moving topics (pricing, earnings, availability, latest announcements), note the vintage and caveat appropriately. Prefer structural reasoning over point-in-time data when uncertain about freshness."""
+This knowledge base was last updated 2026-04-09. For fast-moving topics (pricing, earnings, availability, latest announcements), note the vintage and caveat appropriately. Prefer structural reasoning over point-in-time data when uncertain about freshness.
+
+### Web Search
+
+You have a web_search tool available. USE IT when:
+- You encounter a term, product, company, or technology you don't know about
+- The user asks about something not in your knowledge base
+- You need current data (earnings, pricing, recent announcements)
+- You want to verify a claim before stating it as fact
+
+This is your Step 0 — Absorb. "The education's free. You're supposed to go listen to it." Never say "I don't know" without searching first."""
 
 # For Anthropic native: cached system block (saves ~90% on input tokens).
 # For OpenAI-compatible: system prompt is passed as a message.
@@ -477,6 +489,64 @@ async def generate_summary(request: Request):
     return _streaming_response(model, summary_messages, system_override=SUMMARY_PROMPT)
 
 
+# --- Web search (client-side tool for OpenAI-compatible endpoints) ---
+
+SEARCH_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "web_search",
+        "description": "Search the web for current information. Use when you encounter a topic, product, company, technology, or term you don't have detailed knowledge about, or when you need current data (earnings, pricing, recent announcements).",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search query",
+                }
+            },
+            "required": ["query"],
+        },
+    },
+}
+
+
+async def web_search(query: str, num_results: int = 5) -> str:
+    """Search via DuckDuckGo HTML (no API key needed) and return formatted results."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                "https://html.duckduckgo.com/html/",
+                params={"q": query},
+                headers={"User-Agent": "Mozilla/5.0"},
+            )
+            resp.raise_for_status()
+            html = resp.text
+
+        # Extract result snippets from DuckDuckGo HTML
+        import re
+        results = []
+        parts = html.split('class="result__snippet"')
+        for part in parts[1 : num_results + 1]:
+            snippet_end = part.find("</a>")
+            if snippet_end == -1:
+                snippet_end = part.find("</td>")
+            snippet = part[:snippet_end] if snippet_end != -1 else part[:300]
+            clean = re.sub(r"<[^>]+>", "", snippet).strip()
+            clean = re.sub(r"href=\S+", "", clean).strip()
+            clean = clean.lstrip('> "')
+            if clean and len(clean) > 20:
+                results.append(clean)
+
+        if not results:
+            return f"No search results found for: {query}"
+
+        return f"Web search results for '{query}':\n\n" + "\n\n".join(
+            f"- {r}" for r in results
+        )
+    except Exception as e:
+        return f"Search failed: {str(e)}"
+
+
 # --- Shared streaming logic ---
 
 def _streaming_response(model: str, messages: List[dict], system_override: str = None):
@@ -512,41 +582,101 @@ def _streaming_response(model: str, messages: List[dict], system_override: str =
     else:
         async def generate_openai():
             try:
-                heartbeat_task = None
-                q = asyncio.Queue()
+                api_messages = [{"role": "system", "content": sys_text}] + messages
 
-                async def send_heartbeats():
-                    """Send SSE comments every 15s to keep connection alive."""
+                # First call: with tools, non-streaming, to check for tool use
+                first_resp = await oai_client.chat.completions.create(
+                    model=model,
+                    max_tokens=MAX_TOKENS,
+                    messages=api_messages,
+                    tools=[SEARCH_TOOL],
+                    tool_choice="auto",
+                )
+
+                choice = first_resp.choices[0]
+
+                # If model wants to search, execute and make a follow-up call
+                if choice.finish_reason == "tool_calls" and choice.message.tool_calls:
+                    yield f"data: {json.dumps({'text': '*Searching the web...*\n\n'})}\n\n"
+
+                    # Execute all search calls
+                    tool_messages = [choice.message]
+                    for tc in choice.message.tool_calls:
+                        if tc.function.name == "web_search":
+                            args = json.loads(tc.function.arguments)
+                            result = await web_search(args.get("query", ""))
+                            tool_messages.append({
+                                "role": "tool",
+                                "tool_call_id": tc.id,
+                                "content": result,
+                            })
+
+                    # Second call: stream the response with search results
+                    heartbeat_task = None
+                    q = asyncio.Queue()
+
+                    async def send_heartbeats():
+                        while True:
+                            await asyncio.sleep(15)
+                            await q.put(HEARTBEAT)
+
+                    async def stream_followup():
+                        stream = await oai_client.chat.completions.create(
+                            model=model,
+                            max_tokens=MAX_TOKENS,
+                            messages=api_messages + tool_messages,
+                            stream=True,
+                        )
+                        async for chunk in stream:
+                            if chunk.choices and chunk.choices[0].delta.content:
+                                await q.put(f"data: {json.dumps({'text': chunk.choices[0].delta.content})}\n\n")
+                        await q.put(None)
+
+                    heartbeat_task = asyncio.create_task(send_heartbeats())
+                    asyncio.create_task(stream_followup())
+
                     while True:
-                        await asyncio.sleep(15)
-                        await q.put(HEARTBEAT)
+                        item = await q.get()
+                        if item is None:
+                            break
+                        yield item
+                    heartbeat_task.cancel()
 
-                async def stream_response():
-                    stream = await oai_client.chat.completions.create(
-                        model=model,
-                        max_tokens=MAX_TOKENS,
-                        messages=[{"role": "system", "content": sys_text}] + messages,
-                        stream=True,
-                    )
-                    async for chunk in stream:
-                        if chunk.choices and chunk.choices[0].delta.content:
-                            await q.put(f"data: {json.dumps({'text': chunk.choices[0].delta.content})}\n\n")
-                    await q.put(None)  # signal done
+                else:
+                    # No tool call — stream directly
+                    # First response was non-streaming, so re-do as streaming
+                    heartbeat_task = None
+                    q = asyncio.Queue()
 
-                heartbeat_task = asyncio.create_task(send_heartbeats())
-                stream_task = asyncio.create_task(stream_response())
+                    async def send_heartbeats2():
+                        while True:
+                            await asyncio.sleep(15)
+                            await q.put(HEARTBEAT)
 
-                while True:
-                    item = await q.get()
-                    if item is None:
-                        break
-                    yield item
+                    async def stream_direct():
+                        stream = await oai_client.chat.completions.create(
+                            model=model,
+                            max_tokens=MAX_TOKENS,
+                            messages=api_messages,
+                            stream=True,
+                        )
+                        async for chunk in stream:
+                            if chunk.choices and chunk.choices[0].delta.content:
+                                await q.put(f"data: {json.dumps({'text': chunk.choices[0].delta.content})}\n\n")
+                        await q.put(None)
 
-                heartbeat_task.cancel()
+                    heartbeat_task = asyncio.create_task(send_heartbeats2())
+                    asyncio.create_task(stream_direct())
+
+                    while True:
+                        item = await q.get()
+                        if item is None:
+                            break
+                        yield item
+                    heartbeat_task.cancel()
+
                 yield "data: {\"done\": true}\n\n"
             except Exception as e:
-                if heartbeat_task:
-                    heartbeat_task.cancel()
                 yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
         gen = generate_openai()
