@@ -115,11 +115,12 @@ optional upgrades for when you explicitly need speaker diarization.
 | Rank | Source                                      | Cost     | When to use |
 |------|---------------------------------------------|----------|-------------|
 | 1    | Official channel CC (human-authored)        | Free     | Best by a mile when the channel uploads real captions — use yt-dlp's `--write-sub` manually if you spot one |
-| 2    | **NVIDIA Parakeet via NeMo** (`--service parakeet`) | Free, local | Best English accuracy on the Open ASR Leaderboard. NVIDIA's own model — thematically perfect for this project. Heavier install (~2 GB of PyTorch + NeMo). |
-| 3    | **faster-whisper distil-large-v3** (`--service whisper`) — the default | Free, local | Strong accuracy, lightweight install (one `pip install`). No diarization. |
-| 4    | yt-dlp auto-captions (`--service youtube`)  | Free     | 30-second fetch. Only accurate enough for daily monitoring to decide whether to upgrade. |
-| 5    | AssemblyAI (`--service assemblyai`)         | ~$0.17/hr | Opt-in *only* when you need speaker diarization on a multi-speaker podcast (who said what, attributed per utterance). |
-| 6    | Raw RSS summary                             | Free     | For paywalled text sources (Stratechery article, The Information) — treat as an alert, not a transcript |
+| 2    | **Parakeet-MLX** (`--service parakeet-mlx`) | Free, local, **Apple Silicon only** | Same weights as NeMo Parakeet, ported to Apple's MLX framework — runs natively on M-series GPUs with no PyTorch dependency. Lightest install of any local backend on an M-series Mac and often the fastest. `pip install parakeet-mlx`. |
+| 3    | **NVIDIA Parakeet via NeMo** (`--service parakeet`) | Free, local | Best English accuracy on the Open ASR Leaderboard. NVIDIA's own model — thematically perfect for this project. Heavier install (~2 GB of PyTorch + NeMo); use this path if you're on Linux/CUDA or a non-Apple Mac. |
+| 4    | **faster-whisper distil-large-v3** (`--service whisper`) — the default | Free, local | Strong accuracy, lightweight install (one `pip install`). No diarization by default — pair with `--diarize` for speaker labels. |
+| 5    | yt-dlp auto-captions (`--service youtube`)  | Free     | 30-second fetch. Only accurate enough for daily monitoring to decide whether to upgrade. |
+| 6    | AssemblyAI (`--service assemblyai`)         | ~$0.17/hr | Opt-in *only* when you need speaker diarization on a multi-speaker podcast *without* running pyannote locally (see `--diarize` below). |
+| 7    | Raw RSS summary                             | Free     | For paywalled text sources (Stratechery article, The Information) — treat as an alert, not a transcript |
 
 Flip a source to auto-upgrade by setting `upgrade_transcript: true` in
 `sources.yaml`. The upcoming runner auto-invocation will default to
@@ -152,9 +153,51 @@ Output goes to `scripts/ingest/transcripts/<id>.parakeet.txt`. NeMo has
 segment-level timestamps on newer releases; the script falls back to a
 single unsegmented block on older NeMo.
 
+### Wiring Parakeet-MLX (Apple Silicon, lightest local option)
+
+```bash
+pip install parakeet-mlx                                   # no PyTorch
+scripts/ingest/upgrade_transcript.py <video_id> --service parakeet-mlx
+```
+
+Output goes to `scripts/ingest/transcripts/<id>.parakeet-mlx.txt`. The
+script hard-fails on non-Apple-Silicon platforms with a pointer to the
+NeMo or whisper backends.
+
+### Speaker diarization with pyannote (`--diarize`)
+
+Any local STT backend (`whisper`, `parakeet`, `parakeet-mlx`) can be
+post-processed with [pyannote.audio](https://github.com/pyannote/pyannote-audio)
+to attach speaker labels:
+
+```bash
+pip install pyannote.audio torch torchaudio
+export HF_TOKEN=hf_...                                     # or HUGGING_FACE_HUB_TOKEN
+# Accept the model terms once at:
+#   https://huggingface.co/pyannote/speaker-diarization-3.1
+scripts/ingest/upgrade_transcript.py <video_id> --service parakeet-mlx --diarize
+```
+
+The script extracts audio once, runs the STT backend and pyannote on the
+same file, aligns pyannote's speaker intervals to the STT's per-segment
+timestamps, and writes a second file alongside the raw transcript:
+
+```
+scripts/ingest/transcripts/<id>.<service>.txt            # raw timestamped transcript
+scripts/ingest/transcripts/<id>.<service>.diarized.txt   # [HH:MM:SS] Speaker A: ...
+```
+
+Speakers are re-labelled `A`, `B`, `C`, ... in first-appearance order so
+the output stays stable regardless of pyannote's internal `SPEAKER_0N`
+numbering. If `HF_TOKEN` is missing, or if `pyannote.audio` isn't
+installed, the script exits with a specific install / auth message and
+does not touch any transcript files.
+
 ### Wiring AssemblyAI (optional, paid — only for diarization)
 
-Skip this unless you specifically need speaker-labelled transcripts.
+Skip this unless you specifically need speaker-labelled transcripts
+*and* you'd rather pay $0.17/hr than run pyannote locally (see `--diarize`
+above).
 
 1. Get a key from <https://www.assemblyai.com> (free signup credit covers
    ~100 hours of diarized audio).

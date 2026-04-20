@@ -1,32 +1,42 @@
 #!/usr/bin/env python3
 """Fetch a high-quality transcript for a single YouTube video.
 
-Five backends, in order of recommendation for extracting Jensen material:
+Six backends, in order of recommendation for extracting Jensen material:
 
-  - ``whisper``    (default for upgrades, FREE, local) — faster-whisper
-                   with the ``distil-large-v3`` model. ~10-15 min for a
-                   2-hour podcast on a modern laptop CPU; faster on
-                   Apple Silicon MPS or CUDA. Good accuracy, per-segment
-                   timestamps. No diarization (single stream of text).
-                   Install: ``pip install faster-whisper``.
-  - ``parakeet``   (FREE, local, best English accuracy) — NVIDIA's own
-                   Parakeet-TDT 0.6B v2 via NeMo. Tops the Open ASR
-                   Leaderboard on English. Heavy install (~2 GB of
-                   PyTorch + NeMo). Install:
-                   ``pip install 'nemo_toolkit[asr]'``.
-  - ``youtube``    (FREE, lowest quality) — yt-dlp auto-captions. 30s
-                   fetch. Good enough to decide *whether* to upgrade,
-                   not good enough to extract quotes verbatim.
-  - ``assemblyai`` (PAID, ~$0.17/hr with diarization) — verbatim +
-                   speaker labels. Use when you need to attribute quotes
-                   in a 3+-speaker podcast. Needs ``ASSEMBLYAI_API_KEY``.
-  - ``rev``        (PAID, ~$90/hr) — human-grade verbatim. Not wired;
-                   AssemblyAI covers the need at 1/20th the cost.
+  - ``whisper``       (default for upgrades, FREE, local) — faster-whisper
+                      with the ``distil-large-v3`` model. ~10-15 min for a
+                      2-hour podcast on a modern laptop CPU; faster on
+                      Apple Silicon MPS or CUDA. Good accuracy, per-segment
+                      timestamps. No diarization (single stream of text).
+                      Install: ``pip install faster-whisper``.
+  - ``parakeet``      (FREE, local, best English accuracy) — NVIDIA's own
+                      Parakeet-TDT 0.6B v2 via NeMo. Tops the Open ASR
+                      Leaderboard on English. Heavy install (~2 GB of
+                      PyTorch + NeMo). Install:
+                      ``pip install 'nemo_toolkit[asr]'``.
+  - ``parakeet-mlx``  (FREE, local, Apple Silicon only) — Parakeet ported
+                      to Apple's MLX framework. No PyTorch dependency, much
+                      lighter install than NeMo, runs natively on M-series
+                      GPUs. Install: ``pip install parakeet-mlx``.
+  - ``youtube``       (FREE, lowest quality) — yt-dlp auto-captions. 30s
+                      fetch. Good enough to decide *whether* to upgrade,
+                      not good enough to extract quotes verbatim.
+  - ``assemblyai``    (PAID, ~$0.17/hr with diarization) — verbatim +
+                      speaker labels. Use when you need to attribute quotes
+                      in a 3+-speaker podcast. Needs ``ASSEMBLYAI_API_KEY``.
+  - ``rev``           (PAID, ~$90/hr) — human-grade verbatim. Not wired;
+                      AssemblyAI covers the need at 1/20th the cost.
+
+Optional ``--diarize`` post-processes any local STT output (whisper /
+parakeet / parakeet-mlx) with ``pyannote.audio`` to produce a
+speaker-labelled transcript. Requires a HuggingFace token and accepting
+the model terms at https://huggingface.co/pyannote/speaker-diarization-3.1.
 
 Usage:
-    upgrade_transcript.py VIDEO_ID [--service SVC] [--lang en] [--model NAME]
+    upgrade_transcript.py VIDEO_ID [--service SVC] [--lang en] [--model NAME] [--diarize]
 
 Writes to ``scripts/ingest/transcripts/<video_id>.<service>.<ext>``.
+With ``--diarize``, also writes ``<video_id>.<service>.diarized.txt``.
 
 The default service is ``whisper`` because it's free, local, and
 good enough to feed the interview extractor directly.
@@ -37,6 +47,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -55,9 +66,13 @@ _ASSEMBLYAI_BASE = "https://api.assemblyai.com/v2"
 
 _WHISPER_DEFAULT_MODEL = "distil-large-v3"  # 6x faster, comparable accuracy
 _PARAKEET_DEFAULT_MODEL = "nvidia/parakeet-tdt-0.6b-v2"  # Open ASR leaderboard top
+_PARAKEET_MLX_DEFAULT_MODEL = "mlx-community/parakeet-tdt-0.6b-v2"
 _PARAKEET_TIMESTAMP_FMT = "%H:%M:%S"
 
-SERVICES = ("whisper", "parakeet", "youtube", "assemblyai", "rev")
+_PYANNOTE_MODEL = "pyannote/speaker-diarization-3.1"
+_DIARIZABLE_SERVICES = ("whisper", "parakeet", "parakeet-mlx")
+
+SERVICES = ("whisper", "parakeet", "parakeet-mlx", "youtube", "assemblyai", "rev")
 
 
 def _fetch_youtube(video_id: str, lang: str, **_kw) -> Path:
@@ -120,7 +135,13 @@ def _fetch_rev(video_id: str, lang: str, **_kw) -> Path:
 # ---------------------------------------------------------------------------
 
 
-def _fetch_whisper(video_id: str, lang: str, *, model_name: str | None = None) -> Path:
+def _fetch_whisper(
+    video_id: str,
+    lang: str,
+    *,
+    model_name: str | None = None,
+    audio_path: Path | None = None,
+) -> tuple[Path, list[tuple[float, str]]]:
     try:
         from faster_whisper import WhisperModel  # type: ignore
     except ImportError:
@@ -131,7 +152,9 @@ def _fetch_whisper(video_id: str, lang: str, *, model_name: str | None = None) -
         )
 
     name = model_name or _WHISPER_DEFAULT_MODEL
-    audio = _extract_audio(video_id)
+    owns_audio = audio_path is None
+    audio = audio_path if audio_path is not None else _extract_audio(video_id)
+    segments_out: list[tuple[float, str]] = []
     try:
         # device="auto" picks CUDA > MPS > CPU. compute_type="int8" keeps CPU
         # inference fast with ~no measurable accuracy loss for English.
@@ -153,18 +176,21 @@ def _fetch_whisper(video_id: str, lang: str, *, model_name: str | None = None) -
             "",
         ]
         for seg in segments:
-            ts = time.strftime(_PARAKEET_TIMESTAMP_FMT, time.gmtime(seg.start))
             text = (seg.text or "").strip()
-            if text:
-                lines.append(f"[{ts}] {text}")
+            if not text:
+                continue
+            ts = time.strftime(_PARAKEET_TIMESTAMP_FMT, time.gmtime(seg.start))
+            lines.append(f"[{ts}] {text}")
+            segments_out.append((float(seg.start), text))
         body = "\n".join(lines) + "\n"
     finally:
-        _cleanup_audio(audio)
+        if owns_audio:
+            _cleanup_audio(audio)
 
     TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
     out = TRANSCRIPTS_DIR / f"{video_id}.whisper.txt"
     out.write_text(body, encoding="utf-8")
-    return out
+    return out, segments_out
 
 
 # ---------------------------------------------------------------------------
@@ -172,7 +198,13 @@ def _fetch_whisper(video_id: str, lang: str, *, model_name: str | None = None) -
 # ---------------------------------------------------------------------------
 
 
-def _fetch_parakeet(video_id: str, lang: str, *, model_name: str | None = None) -> Path:
+def _fetch_parakeet(
+    video_id: str,
+    lang: str,
+    *,
+    model_name: str | None = None,
+    audio_path: Path | None = None,
+) -> tuple[Path, list[tuple[float, str]]]:
     # Intentionally fail if requested in a non-English context — Parakeet
     # models on the Open ASR Leaderboard are English-only. Use whisper for
     # multilingual.
@@ -188,11 +220,13 @@ def _fetch_parakeet(video_id: str, lang: str, *, model_name: str | None = None) 
             "nemo_toolkit not installed. Install with:\n"
             "  pip install 'nemo_toolkit[asr]'\n"
             "This is a ~2 GB install (PyTorch, torchaudio, NeMo, "
-            "hydra-core). Use --service whisper for a lighter option."
+            "hydra-core). Use --service whisper for a lighter option, or "
+            "--service parakeet-mlx on Apple Silicon."
         )
 
     name = model_name or _PARAKEET_DEFAULT_MODEL
-    audio = _extract_audio(video_id)
+    owns_audio = audio_path is None
+    audio = audio_path if audio_path is not None else _extract_audio(video_id)
     try:
         print(f"[loading parakeet model: {name}]", file=sys.stderr)
         asr = nemo_asr.models.ASRModel.from_pretrained(name)
@@ -202,9 +236,10 @@ def _fetch_parakeet(video_id: str, lang: str, *, model_name: str | None = None) 
         # Older NeMo without the `timestamps=` kwarg — transcribe without.
         hyps = asr.transcribe([str(audio)])
     finally:
-        _cleanup_audio(audio)
+        if owns_audio:
+            _cleanup_audio(audio)
 
-    text, timed_lines = _parakeet_render(hyps)
+    text, timed_lines, timed_segments = _parakeet_render(hyps)
     header = [
         f"# Transcript — Parakeet ({name})",
         f"# video_id: {video_id}   language: en",
@@ -222,26 +257,27 @@ def _fetch_parakeet(video_id: str, lang: str, *, model_name: str | None = None) 
     TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
     out = TRANSCRIPTS_DIR / f"{video_id}.parakeet.txt"
     out.write_text(body, encoding="utf-8")
-    return out
+    return out, timed_segments
 
 
-def _parakeet_render(hyps) -> tuple[str, list[str]]:
+def _parakeet_render(hyps) -> tuple[str, list[str], list[tuple[float, str]]]:
     """NeMo's ASR.transcribe() return shape varies by model + version.
 
-    Normalize to (flat_text, list_of_timestamped_lines). If segment
-    timestamps aren't available, ``timestamped_lines`` is empty.
+    Normalize to (flat_text, list_of_timestamped_lines, list_of_(start, text)).
+    If segment timestamps aren't available, both timed lists are empty.
     """
     if not hyps:
-        return "", []
+        return "", [], []
     # NeMo often returns list[Hypothesis] or tuple(hyps, all_hyps).
     if isinstance(hyps, tuple):
         hyps = hyps[0] if hyps else []
     if not hyps:
-        return "", []
+        return "", [], []
     h = hyps[0]
     text = h.text if hasattr(h, "text") else (h if isinstance(h, str) else str(h))
 
-    timed: list[str] = []
+    timed_lines: list[str] = []
+    timed_segments: list[tuple[float, str]] = []
     # Newer NeMo: h.timestamp = {'segment': [{'start': s, 'end': e, 'segment': '...'}], 'word': [...]}
     ts = getattr(h, "timestamp", None)
     if isinstance(ts, dict):
@@ -251,8 +287,97 @@ def _parakeet_render(hyps) -> tuple[str, list[str]]:
             piece = (s.get("segment") or s.get("text") or "").strip()
             if piece:
                 clock = time.strftime(_PARAKEET_TIMESTAMP_FMT, time.gmtime(start))
-                timed.append(f"[{clock}] {piece}")
-    return text, timed
+                timed_lines.append(f"[{clock}] {piece}")
+                timed_segments.append((start, piece))
+    return text, timed_lines, timed_segments
+
+
+# ---------------------------------------------------------------------------
+# Parakeet-MLX (local, free, Apple Silicon only)
+# ---------------------------------------------------------------------------
+
+
+def _fetch_parakeet_mlx(
+    video_id: str,
+    lang: str,
+    *,
+    model_name: str | None = None,
+    audio_path: Path | None = None,
+) -> tuple[Path, list[tuple[float, str]]]:
+    # Parakeet is English-only — mirrors the NeMo backend.
+    if lang not in ("en", "auto"):
+        raise SystemExit(
+            f"Parakeet models are English-only (requested lang={lang!r}). "
+            f"Use --service whisper for multilingual."
+        )
+
+    # Hard platform guard — MLX only runs on Apple Silicon.
+    if sys.platform != "darwin" or platform.machine() not in ("arm64", "aarch64"):
+        raise SystemExit(
+            "parakeet-mlx only runs on Apple Silicon (macOS arm64).\n"
+            f"Detected: {sys.platform}/{platform.machine()}.\n"
+            "Use --service parakeet (NeMo, cross-platform) or "
+            "--service whisper (lightest option) instead."
+        )
+
+    try:
+        from parakeet_mlx import from_pretrained  # type: ignore
+    except ImportError:
+        raise SystemExit(
+            "parakeet-mlx not installed. Install with:\n"
+            "  pip install parakeet-mlx\n"
+            "Lightweight Apple-Silicon-native Parakeet port — no PyTorch\n"
+            "dependency. See https://github.com/senstella/parakeet-mlx."
+        )
+
+    name = model_name or _PARAKEET_MLX_DEFAULT_MODEL
+    owns_audio = audio_path is None
+    audio = audio_path if audio_path is not None else _extract_audio(video_id)
+    timed_segments: list[tuple[float, str]] = []
+    try:
+        print(f"[loading parakeet-mlx model: {name}]", file=sys.stderr)
+        model = from_pretrained(name)
+        print(f"[transcribing {audio.name}]", file=sys.stderr)
+        result = model.transcribe(str(audio))
+    finally:
+        if owns_audio:
+            _cleanup_audio(audio)
+
+    # parakeet-mlx's result exposes a `.sentences` (or similar) iterable of
+    # objects with .start / .end / .text. Older/newer releases sometimes
+    # expose .text only — fall back gracefully.
+    sentences = (
+        getattr(result, "sentences", None)
+        or getattr(result, "segments", None)
+        or []
+    )
+    for s in sentences:
+        start = float(getattr(s, "start", 0) or 0)
+        piece = (getattr(s, "text", "") or "").strip()
+        if piece:
+            timed_segments.append((start, piece))
+
+    header = [
+        f"# Transcript — parakeet-mlx ({name})",
+        f"# video_id: {video_id}   language: en",
+    ]
+    if timed_segments:
+        header.append("")
+        lines = header + [
+            f"[{time.strftime(_PARAKEET_TIMESTAMP_FMT, time.gmtime(start))}] {piece}"
+            for start, piece in timed_segments
+        ]
+        body = "\n".join(lines) + "\n"
+    else:
+        flat = (getattr(result, "text", "") or str(result)).strip()
+        header.append("# per-segment timestamps unavailable from this model version")
+        header.append("")
+        body = "\n".join(header) + flat + "\n"
+
+    TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
+    out = TRANSCRIPTS_DIR / f"{video_id}.parakeet-mlx.txt"
+    out.write_text(body, encoding="utf-8")
+    return out, timed_segments
 
 
 # ---------------------------------------------------------------------------
@@ -266,6 +391,94 @@ def _cleanup_audio(audio: Path) -> None:
         audio.parent.rmdir()
     except OSError:
         pass
+
+
+# ---------------------------------------------------------------------------
+# pyannote diarization (optional post-processing)
+# ---------------------------------------------------------------------------
+
+
+def _diarize(audio: Path) -> list[tuple[float, float, str]]:
+    """Run pyannote on ``audio`` and return a list of (start, end, speaker)."""
+    token = (
+        os.environ.get("HF_TOKEN")
+        or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+    )
+    if not token:
+        raise SystemExit(
+            "pyannote diarization requires HF_TOKEN. "
+            "Get one from https://huggingface.co/settings/tokens and accept "
+            "the model terms at "
+            "https://huggingface.co/pyannote/speaker-diarization-3.1."
+        )
+    try:
+        from pyannote.audio import Pipeline  # type: ignore
+    except ImportError:
+        raise SystemExit(
+            "pyannote.audio not installed. Install with:\n"
+            "  pip install pyannote.audio torch torchaudio\n"
+            "Then accept the model terms at "
+            "https://huggingface.co/pyannote/speaker-diarization-3.1."
+        )
+
+    print(f"[loading pyannote pipeline: {_PYANNOTE_MODEL}]", file=sys.stderr)
+    pipeline = Pipeline.from_pretrained(_PYANNOTE_MODEL, use_auth_token=token)
+    print(f"[diarizing {audio.name}]", file=sys.stderr)
+    diarization = pipeline(str(audio))
+
+    # Map pyannote's internal speaker ids (SPEAKER_00, SPEAKER_01, ...) to
+    # stable A/B/C labels in first-appearance order.
+    labels: dict[str, str] = {}
+    intervals: list[tuple[float, float, str]] = []
+    for turn, _track, speaker in diarization.itertracks(yield_label=True):
+        if speaker not in labels:
+            labels[speaker] = chr(ord("A") + len(labels))
+        intervals.append((float(turn.start), float(turn.end), labels[speaker]))
+    intervals.sort(key=lambda x: x[0])
+    return intervals
+
+
+def _speaker_at(t: float, intervals: list[tuple[float, float, str]]) -> str:
+    """Return the speaker label whose [a, b] contains t, else nearest neighbor."""
+    if not intervals:
+        return "?"
+    best_label = intervals[0][2]
+    best_dist = float("inf")
+    for a, b, label in intervals:
+        if a <= t <= b:
+            return label
+        # Distance to the nearest edge of this interval.
+        dist = a - t if t < a else t - b
+        if dist < best_dist:
+            best_dist = dist
+            best_label = label
+    return best_label
+
+
+def _write_diarized(
+    video_id: str,
+    service: str,
+    stt_segments: list[tuple[float, str]],
+    intervals: list[tuple[float, float, str]],
+) -> Path:
+    lines = [
+        f"# Diarized transcript — {service} + pyannote",
+        f"# video_id: {video_id}",
+        "",
+    ]
+    if not stt_segments:
+        lines.append(
+            "# STT backend did not emit per-segment timestamps; diarization skipped."
+        )
+    for start, text in stt_segments:
+        spk = _speaker_at(start, intervals)
+        ts = time.strftime(_PARAKEET_TIMESTAMP_FMT, time.gmtime(start))
+        lines.append(f"[{ts}] Speaker {spk}: {text}")
+
+    TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
+    out = TRANSCRIPTS_DIR / f"{video_id}.{service}.diarized.txt"
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -415,15 +628,18 @@ def _fetch_assemblyai(video_id: str, lang: str, **_kw) -> Path:
     return out
 
 
-# Dispatch table. Backends share the signature
-#   (video_id: str, lang: str, *, model_name: str | None = None) -> Path
-# so --model can be passed uniformly.
+# Dispatch table. Local STT backends share the signature
+#   (video_id: str, lang: str, *, model_name: str | None = None,
+#    audio_path: Path | None = None) -> tuple[Path, list[(start, text)]]
+# so --model can be passed uniformly and --diarize can reuse audio.
+# Non-local backends (youtube, assemblyai, rev) return just Path.
 _DISPATCH = {
-    "whisper":    _fetch_whisper,
-    "parakeet":   _fetch_parakeet,
-    "youtube":    _fetch_youtube,
-    "assemblyai": _fetch_assemblyai,
-    "rev":        _fetch_rev,
+    "whisper":       _fetch_whisper,
+    "parakeet":      _fetch_parakeet,
+    "parakeet-mlx":  _fetch_parakeet_mlx,
+    "youtube":       _fetch_youtube,
+    "assemblyai":    _fetch_assemblyai,
+    "rev":           _fetch_rev,
 }
 
 
@@ -432,7 +648,9 @@ def main() -> int:
         description=(
             "Fetch a transcript for a YouTube video. Default backend is "
             "local faster-whisper (free, ~$0). Use --service parakeet for "
-            "NVIDIA's Parakeet, --service assemblyai for paid + diarization."
+            "NVIDIA's Parakeet, --service parakeet-mlx for the Apple-Silicon "
+            "port, --service assemblyai for paid + diarization. Add --diarize "
+            "to post-process any local STT backend with pyannote."
         ),
     )
     ap.add_argument("video_id", help="11-character YouTube video ID")
@@ -444,6 +662,8 @@ def main() -> int:
             "Transcription backend. "
             "whisper (default, free, local): faster-whisper distil-large-v3. "
             "parakeet (free, local): NVIDIA Parakeet via NeMo — best English. "
+            "parakeet-mlx (free, local, Apple Silicon only): MLX-native "
+            "Parakeet port, much lighter than NeMo. "
             "youtube (free, low quality): yt-dlp auto-captions. "
             "assemblyai (paid, ~$0.17/hr): verbatim + speaker diarization. "
             "rev (not wired)."
@@ -453,19 +673,59 @@ def main() -> int:
         "--lang",
         default="en",
         help="Language code (default: en). 'auto' lets whisper detect; "
-             "parakeet is English-only.",
+             "parakeet and parakeet-mlx are English-only.",
     )
     ap.add_argument(
         "--model",
         default=None,
         help="Override the model id. For whisper: e.g. 'large-v3', 'base', "
-             "'small'. For parakeet: e.g. 'nvidia/parakeet-rnnt-1.1b'.",
+             "'small'. For parakeet: e.g. 'nvidia/parakeet-rnnt-1.1b'. For "
+             "parakeet-mlx: e.g. 'mlx-community/parakeet-tdt-0.6b-v2'.",
+    )
+    ap.add_argument(
+        "--diarize",
+        action="store_true",
+        help="Post-process a local STT transcript with pyannote.audio to "
+             "produce speaker-labelled output at "
+             "<id>.<service>.diarized.txt. Requires HF_TOKEN (or "
+             "HUGGING_FACE_HUB_TOKEN) and that you've accepted the model "
+             "terms at https://huggingface.co/pyannote/speaker-diarization-3.1. "
+             "Only applies to whisper/parakeet/parakeet-mlx — assemblyai "
+             "already produces diarized output natively.",
     )
     args = ap.parse_args()
 
     fetcher = _DISPATCH[args.service]
-    path = fetcher(args.video_id, args.lang, model_name=args.model)
-    print(path)
+
+    if args.diarize and args.service not in _DIARIZABLE_SERVICES:
+        raise SystemExit(
+            f"--diarize only supports local STT backends "
+            f"({', '.join(_DIARIZABLE_SERVICES)}). "
+            "assemblyai already emits speaker-labelled output natively; "
+            "youtube/rev do not."
+        )
+
+    if args.diarize:
+        # Extract once; reuse for both STT and pyannote.
+        audio = _extract_audio(args.video_id)
+        try:
+            path, segments = fetcher(
+                args.video_id,
+                args.lang,
+                model_name=args.model,
+                audio_path=audio,
+            )
+            intervals = _diarize(audio)
+        finally:
+            _cleanup_audio(audio)
+        diarized = _write_diarized(args.video_id, args.service, segments, intervals)
+        print(path)
+        print(diarized)
+    else:
+        result = fetcher(args.video_id, args.lang, model_name=args.model)
+        # Local STT backends now return (Path, segments); others return Path.
+        path = result[0] if isinstance(result, tuple) else result
+        print(path)
     return 0
 
 
