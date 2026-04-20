@@ -62,10 +62,29 @@ def _latest_history() -> Optional[Path]:
     return files[-1] if files else None
 
 
-def _judge_prompt(case: dict, turn: dict, rubric_cfg: dict) -> tuple[str, str]:
+# Dimensions that presuppose the user has already triggered something
+# specific (asked a fact question, requested a debrief, disagreed with
+# Jensen). Grading these on the opener turn — where nothing has happened
+# yet — produces false-negative 0/1 scores. Only score them on the final
+# turn of each case.
+_LAST_TURN_DIMS = {
+    "tool_use_appropriateness",
+    "factual_grounding",
+    "pushback_specificity",
+}
+
+
+def _active_dimensions(case: dict, turn: dict, turn_index: int, total_turns: int) -> list[str]:
+    """Filter case['rubric'] down to the dimensions that apply to *this* turn."""
+    requested = case.get("rubric", []) or []
+    is_last = turn_index == total_turns - 1
+    return [d for d in requested if d not in _LAST_TURN_DIMS or is_last]
+
+
+def _judge_prompt(case: dict, turn: dict, active_dims: list[str], rubric_cfg: dict) -> tuple[str, str]:
     """Return (system_prompt, user_prompt) for the judge call."""
     dimension_block = []
-    for dim in case.get("rubric", []):
+    for dim in active_dims:
         d = rubric_cfg["dimensions"].get(dim)
         if not d:
             continue
@@ -142,19 +161,26 @@ async def grade_run(record: dict, *, rubric_cfg: dict, dry_run: bool = False) ->
     n_graded = 0
 
     for case in record["cases"]:
-        for turn in case["turns"]:
+        total = len(case["turns"])
+        for i, turn in enumerate(case["turns"]):
             if turn.get("error") or not turn.get("response_text"):
                 continue
-            system, user = _judge_prompt(case, turn, rubric_cfg)
-            if dry_run:
-                print(f"\n--- {case['id']} / {turn['kind']} ---\n{user[:800]}…")
+            active = _active_dimensions(case, turn, i, total)
+            if not active:
+                # This turn has nothing scoreable in this case's rubric.
+                turn["llm_judge"] = {"model": judge_model, "scores": {}, "skipped": True}
                 continue
-            print(f"  grading {case['id']} / {turn['kind']} …", end="", flush=True)
+            system, user = _judge_prompt(case, turn, active, rubric_cfg)
+            if dry_run:
+                print(f"\n--- {case['id']} / {turn['kind']} (dims={active}) ---\n{user[:800]}…")
+                continue
+            print(f"  grading {case['id']} / {turn['kind']} "
+                  f"({len(active)} dim) …", end="", flush=True)
             try:
                 scores = await _judge_turn(system, user, judge_model, cli_path)
             except Exception as e:  # noqa: BLE001
                 scores = {"_error": f"{type(e).__name__}: {e}"}
-            turn["llm_judge"] = {"model": judge_model, "scores": scores}
+            turn["llm_judge"] = {"model": judge_model, "scores": scores, "dims": active}
             n_graded += 1
             print(" ok" if "_error" not in scores and "_parse_error" not in scores else " ERR")
 

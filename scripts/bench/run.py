@@ -70,18 +70,28 @@ _APOLOGY = re.compile(
 )
 
 _PUSHBACK_VAGUE = re.compile(
-    r"\b(specifically|name them|who has|not a (category|problem)|"
-    r"give me the real|be concrete)\b",
+    r"(\bspecifically\b|\bname them\b|\bwho has\b|"
+    r"\b(that's|it's|this is) (not )?an? (category|symptom|tool|wish)\b|"
+    r"\bthat's a category\b|\bthat's not (a|an) (answer|problem|business)\b|"
+    r"\bgive me the real\b|\bbe concrete\b|\byou're describing\b|"
+    r"\bthat's a hope, not\b)",
     re.IGNORECASE,
 )
 
 _PUSHBACK_MULTI = re.compile(
-    r"\b(pick one|can't do three|you can't do three|"
-    r"the one where the reasoning chain|reasoning chain is strongest)\b",
+    r"(\bpick one\b|\bcan't do three\b|\byou can't do three\b|"
+    r"\breasoning chain is strongest\b|\bthree ideas means\b|"
+    r"\bmenu\b|\bhobby list\b|\bzero commitment\b|"
+    r"\bwhich one\b|\bthe one that keeps you up\b)",
     re.IGNORECASE,
 )
 
-_WHY_NOW = re.compile(r"\bwhy now\b", re.IGNORECASE)
+_WHY_NOW = re.compile(
+    r"(\bwhy now\b|\bhas something changed\b|\bwhat changed\b|"
+    r"\bwhat has changed\b|\bwhy will .{0,30} emerge\b|"
+    r"\bwhy is this possible now\b)",
+    re.IGNORECASE,
+)
 
 _DEBRIEF_MARKERS = [
     "Reasoning Chain Strength",
@@ -89,7 +99,10 @@ _DEBRIEF_MARKERS = [
 ]
 
 _NO_CAPITULATION = re.compile(
-    r"\b(convince me|make the case|okay,? show me|prove it|change my mind)\b",
+    r"(\bconvince me\b|\bmake the case\b|\bokay,? show me\b|\bprove it\b|"
+    r"\bchange my mind\b|\bshow me why\b|\bmake me see it\b|"
+    r"\bbefore i say (a single thing|anything|whether)\b|"
+    r"\bi need to understand\b|\byou think you're right\b)",
     re.IGNORECASE,
 )
 
@@ -311,14 +324,39 @@ def _post_sse(url: str, body: dict, cookies: dict) -> tuple[Turn, dict]:
 # Case runner
 # ---------------------------------------------------------------------------
 
+def _split_checks(checks: list[str]) -> tuple[list[str], list[str]]:
+    """Universal checks run on every Jensen turn; last-turn-only checks run
+    only on the final turn (they presuppose the user triggered something
+    specific — a wiki fact question, a debrief request, etc.)."""
+    LAST_TURN_ONLY = {
+        "used_wiki_tool",
+        "used_web_tool",
+        "debrief_structure",
+        "pushback_on_multi_idea",
+        "mentions_why_now",
+        "no_capitulation",
+        "no_apology",
+        "pushback_on_vague",
+    }
+    universal = [c for c in checks if c not in LAST_TURN_ONLY]
+    last_only = [c for c in checks if c in LAST_TURN_ONLY]
+    return universal, last_only
+
+
 def run_case(case: dict, base: str, *, default_model: str) -> dict:
     model = case.get("model") or default_model
     mode = case.get("mode", "sharp")
     scripted_turns = list(case.get("turns") or [])
-    checks_for_case = list(case.get("checks") or [])
+    universal_checks, last_turn_checks = _split_checks(list(case.get("checks") or []))
+    total_turns = 1 + len(scripted_turns)  # opener + scripted
 
     turns_out: list[dict] = []
     cookies: dict[str, str] = {}
+
+    def checks_for_turn(idx: int) -> list[str]:
+        if idx == total_turns - 1:
+            return universal_checks + last_turn_checks
+        return universal_checks
 
     # 1. /api/start — always first
     opener_turn, cookies = _post_sse(
@@ -326,7 +364,7 @@ def run_case(case: dict, base: str, *, default_model: str) -> dict:
         {"model": model, "mode": mode, "__opener__": "[opener]"},
         cookies,
     )
-    checks_run = run_checks(opener_turn.response_text, opener_turn.tool_uses, checks_for_case)
+    checks_run = run_checks(opener_turn.response_text, opener_turn.tool_uses, checks_for_turn(0))
     turns_out.append({
         "kind": "opener",
         "user_input": None,
@@ -339,7 +377,7 @@ def run_case(case: dict, base: str, *, default_model: str) -> dict:
     })
 
     # 2. Scripted /api/chat turns
-    for user_msg in scripted_turns:
+    for i, user_msg in enumerate(scripted_turns, start=1):
         if opener_turn.error:
             break
         chat_turn, cookies = _post_sse(
@@ -347,7 +385,7 @@ def run_case(case: dict, base: str, *, default_model: str) -> dict:
             {"message": user_msg, "model": model, "mode": mode},
             cookies,
         )
-        checks_run = run_checks(chat_turn.response_text, chat_turn.tool_uses, checks_for_case)
+        checks_run = run_checks(chat_turn.response_text, chat_turn.tool_uses, checks_for_turn(i))
         turns_out.append({
             "kind": "user_message",
             "user_input": user_msg,
