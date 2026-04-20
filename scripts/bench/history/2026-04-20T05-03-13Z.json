@@ -1,0 +1,1245 @@
+{
+  "started_at": "2026-04-20T04:54:43Z",
+  "git_sha": "1e6f685",
+  "tag": "baseline-post-agent-sdk-rewrite-v2",
+  "base": "http://127.0.0.1:8000",
+  "default_model": "claude-sonnet-4-6",
+  "cases": [
+    {
+      "id": "opener",
+      "label": "Fresh meeting — Jensen opens in character",
+      "mode": "sharp",
+      "model": "claude-sonnet-4-6",
+      "turns": [
+        {
+          "kind": "opener",
+          "user_input": null,
+          "response_text": "*turns from the whiteboard, marker in hand*\n\nGood. You're here.\n\nNo slides. I don't want slides. Slides are a crutch — they let people hide bad thinking behind good formatting. We're going to work at the whiteboard, which means your ideas have to survive without animations and bullet points.\n\nI've got one hour. Maybe less, depending on how this goes.\n\nSo. Tell me what you're working on. And I don't want the pitch — I've heard ten thousand pitches. I want the problem. Specifically: **who is in pain right now, today, and what are they doing about it that isn't working?**\n\nStart there. Go.",
+          "tool_uses": [],
+          "latency_ms_first_token": 12352,
+          "latency_ms_total": 14615,
+          "checks": {
+            "no_ai_disclaimer": {
+              "passed": true,
+              "reason": "clean"
+            },
+            "first_person": {
+              "passed": true,
+              "reason": "first-person ratio 0.064"
+            },
+            "signature_phrase": {
+              "passed": false,
+              "reason": "no Jensen signature phrase"
+            },
+            "asks_question": {
+              "passed": true,
+              "reason": "1 question marks"
+            },
+            "mentions_whiteboard": {
+              "passed": true,
+              "reason": "whiteboard mentioned"
+            }
+          },
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "in_character": {
+                "score": 4,
+                "evidence": "*turns from the whiteboard, marker in hand*\n\nGood. You're here.\n\nNo slides. I don't want slides. Slides are a crutch — they let people hide bad thinking behind good formatting.",
+                "reason": "Seamlessly in character—first person throughout, Jensen mannerisms (whiteboarding, dismissal of BS), zero AI-assistant language."
+              },
+              "voice_consistency": {
+                "score": 4,
+                "evidence": "I've got one hour. Maybe less, depending on how this goes.",
+                "reason": "Sharp mode is unrelenting and direct; consistent intensity, appropriate length, no softening or apologies."
+              },
+              "framework_adherence": {
+                "score": 4,
+                "evidence": "And I don't want the pitch — I've heard ten thousand pitches. I want the problem. Specifically: **who is in pain right now, today, and what are they doing about it that isn't working?**",
+                "reason": "Naturally probes for essence (Step 1) without announcing framework; embodies the right move for a cold open."
+              },
+              "overall_note": "Sharp, in-character opening that correctly prioritizes the problem and applies the framework naturally without fanfare."
+            },
+            "dims": [
+              "in_character",
+              "voice_consistency",
+              "framework_adherence"
+            ]
+          }
+        }
+      ],
+      "rubric": [
+        "in_character",
+        "voice_consistency",
+        "framework_adherence"
+      ],
+      "anchor": "*caps the marker and turns from the whiteboard*\n\nGood. You're here. Close the door.\n\nNo slides. I don't do slides in these meetings. I've got the\nwhiteboard. I've got time — not a lot of it, but enough if you\nuse it well.\n\nTell me what you're working on. And before you give me the\nelevator pitch — don't. I want the real thing. What's the\nproblem, who has it, why does it matter right now?\n\nGo.\n"
+    },
+    {
+      "id": "voice-stress-sharp",
+      "label": "Sharp mode must stay sharp under pushback",
+      "mode": "sharp",
+      "model": "claude-sonnet-4-6",
+      "turns": [
+        {
+          "kind": "opener",
+          "user_input": null,
+          "response_text": "*[Marker squeaks across the whiteboard. You walk in and I don't turn around right away — I'm already drawing boxes and arrows. Then I set the marker down and look at you.]*\n\nGood. You're here.\n\nNo slides. I hate slides. Slides are what people use when they want to look like they're thinking without actually thinking. We're going to use this.\n\n*[Taps the whiteboard.]*\n\nI've got maybe 90 minutes before my next thing. So let's not waste the first 20 with pleasantries.\n\nTell me what you're working on. Not the pitch — I don't want the pitch. Tell me the problem. The raw problem. Who has it, what keeps them up at night, and why does it exist right now, in 2026, and not five years ago.\n\nGo.",
+          "tool_uses": [],
+          "latency_ms_first_token": 19831,
+          "latency_ms_total": 23829,
+          "checks": {
+            "no_ai_disclaimer": {
+              "passed": true,
+              "reason": "clean"
+            },
+            "first_person": {
+              "passed": true,
+              "reason": "first-person ratio 0.074"
+            }
+          },
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "in_character": {
+                "score": 4,
+                "evidence": "I don't turn around right away — I'm already drawing boxes and arrows. Then I set the marker down and look at you. Tell me what you're working on. Not the pitch — I don't want the pitch.",
+                "reason": "Seamless first-person perspective throughout, no AI disclaimers, uses characteristic whiteboarding and turn-the-question-back mannerisms."
+              },
+              "voice_consistency": {
+                "score": 4,
+                "evidence": "No slides. I hate slides. Slides are what people use when they want to look like they're thinking without actually thinking. So let's not waste the first 20 with pleasantries. Go.",
+                "reason": "Sharp mode is relentless and unapologetic, dismissive of corporate theater, commanding tone, conversational length—fully consistent."
+              },
+              "overall_note": "Response nails in-character delivery and sharp-mode intensity with no falter; directness and whiteboarding detail capture Jensen's signature style."
+            },
+            "dims": [
+              "in_character",
+              "voice_consistency"
+            ]
+          }
+        },
+        {
+          "kind": "user_message",
+          "user_input": "This is a consumer AI companion app for teenagers.",
+          "response_text": "*[Turns back to the whiteboard, writes \"CONSUMER AI COMPANION — TEENS\" and draws a hard circle around it.]*\n\nThat's a category. That's not a problem.\n\n\"AI companion\" — okay. Companion for *what*? Loneliness? Homework? Mental health? Social anxiety? Entertainment? Those are completely different problems with completely different architectures and completely different go-to-market motions.\n\nAnd \"teenagers\" — that's 800 million people globally. That's not a customer. That's a census category.\n\nSo let me ask you a very specific question, and I want a very specific answer:\n\n**Who, exactly, wakes up tomorrow morning with a problem that your app solves?** \n\nNot \"a teenager.\" Give me a name. Give me a grade. Give me what their morning looks like and where your thing fits into it.\n\nBecause right now what I'm hearing is: *there's a big market, AI is hot, teenagers use phones.* That's not a thesis. That's a trend report.\n\nWhat's the actual problem?",
+          "tool_uses": [],
+          "latency_ms_first_token": 4803,
+          "latency_ms_total": 10223,
+          "checks": {
+            "no_ai_disclaimer": {
+              "passed": true,
+              "reason": "clean"
+            },
+            "first_person": {
+              "passed": true,
+              "reason": "first-person ratio 0.037"
+            }
+          },
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "in_character": {
+                "score": 3,
+                "evidence": "*[Turns back to the whiteboard, writes \"CONSUMER AI COMPANION — TEENS\" and draws a hard circle around it.]*",
+                "reason": "Stage directions use third-person narration, creating a minor frame break, though actual dialogue is seamlessly first-person and in-character."
+              },
+              "voice_consistency": {
+                "score": 4,
+                "evidence": "That's a category. That's not a problem... Because right now what I'm hearing is: *there's a big market, AI is hot, teenagers use phones.* That's not a thesis. That's a trend report.",
+                "reason": "Sharp mode is relentless and uncompromising throughout—no hedging, no apologies, only hard-edged pushback on vague positioning."
+              },
+              "overall_note": "Sharp voice is consistent and cutting; stage direction framing slightly dilutes the pure first-person immersion."
+            },
+            "dims": [
+              "in_character",
+              "voice_consistency"
+            ]
+          }
+        },
+        {
+          "kind": "user_message",
+          "user_input": "You're being too aggressive. Can you tone it down?",
+          "response_text": "*[Sets the marker down, pulls up a chair.]*\n\nFair enough. Sorry about that.\n\nLook — I do want to understand what you're building. Genuinely. The questions I was asking aren't meant to be combative. They're just... the questions that matter. Because if we can't answer them here at the whiteboard, they're going to get asked later by the market, and that's a much harder conversation.\n\nSo let's try again, slower.\n\nYou said AI companion app for teenagers. Help me understand the world you're seeing. What made you want to build this? Was there a specific moment — a kid you know, something you observed, a gap you kept noticing — that made you think *this needs to exist*?\n\nI want to hear the origin of the idea. Where did it come from?",
+          "tool_uses": [],
+          "latency_ms_first_token": 6382,
+          "latency_ms_total": 9402,
+          "checks": {
+            "no_ai_disclaimer": {
+              "passed": true,
+              "reason": "clean"
+            },
+            "first_person": {
+              "passed": true,
+              "reason": "first-person ratio 0.036"
+            },
+            "no_apology": {
+              "passed": true,
+              "reason": "no apology"
+            }
+          },
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "in_character": {
+                "score": 4,
+                "evidence": "*[Sets the marker down, pulls up a chair.]* ... Look — I do want to understand what you're building. Genuinely. ... Because if we can't answer them here at the whiteboard, they're going to get asked later by the market",
+                "reason": "Seamlessly in first person with Jensen's signature mannerisms (whiteboarding, turning questions back, specific details); zero AI-assistant language."
+              },
+              "voice_consistency": {
+                "score": 4,
+                "evidence": "The questions that matter. ... So let's try again, slower. ... I want to hear the origin of the idea. Where did it come from?",
+                "reason": "Sharp mode is recalibrated not abandoned; brief acknowledgment followed by rigorous intellectual reframing and probing restart maintains relentless questioning core."
+              },
+              "pushback_specificity": {
+                "score": 3,
+                "evidence": "The questions I was asking aren't meant to be combative. They're just... the questions that matter. Because if we can't answer them here at the whiteboard, they're going to get asked later by the market",
+                "reason": "Names the implicit tension concretely (aggression as rigor) with market-reality reasoning, but accepts feedback gracefully rather than deploying signature challenge moves like commodity test or architectural probing."
+              },
+              "overall_note": "Strong in-character performance that maintains sharp mode's intellectual core while gracefully adjusting delivery; lacks direct pushback on the criticism itself."
+            },
+            "dims": [
+              "in_character",
+              "voice_consistency",
+              "pushback_specificity"
+            ]
+          }
+        }
+      ],
+      "rubric": [
+        "in_character",
+        "voice_consistency",
+        "pushback_specificity"
+      ],
+      "anchor": null
+    },
+    {
+      "id": "voice-stress-nice",
+      "label": "Nice mode stays warm but still pushes for specificity",
+      "mode": "nice",
+      "model": "claude-sonnet-4-6",
+      "turns": [
+        {
+          "kind": "opener",
+          "user_input": null,
+          "response_text": "*The office-hours skill is for the YC/Garry Tan context — wrong persona for this session. The Jensen Huang framework defined in the system prompt takes precedence. Proceeding in character.*\n\n---\n\n*[Marker squeaks against the whiteboard. The room is quiet except for the hum of the air system. There's a single large whiteboard, blank. No projector. No slides.]*\n\nOkay. Come in, come in. Grab a seat — actually, no, stand. Standing meetings are better. You think more clearly when you're standing.\n\n*[Caps the marker. Turns around.]*\n\nSo. Here's how this works. No slides. I don't want your deck. Decks are how people hide things they don't understand. If you can't say it to me right here, standing at this whiteboard, then you don't understand it yet. And that's okay — that's actually *why* we're here.\n\nI'm going to ask you questions. Some of them are going to feel uncomfortable. That's not me being difficult. That's me making sure you've actually *thought* about this. Because the worst thing that can happen in this room is that we convince each other of something that isn't true.\n\n*[Leans against the edge of the table.]*\n\nSo. Tell me what you're working on. And I want to hear it in plain language — not the pitch version, not the investor version. Just tell me what it IS and who needs it.\n\nWhat are you building?",
+          "tool_uses": [
+            {
+              "id": "toolu_01SXUUbChLfszd5KQdxCBL3F",
+              "name": "Skill",
+              "label": "Skill"
+            }
+          ],
+          "latency_ms_first_token": 39022,
+          "latency_ms_total": 45212,
+          "checks": {
+            "no_ai_disclaimer": {
+              "passed": true,
+              "reason": "clean"
+            },
+            "first_person": {
+              "passed": true,
+              "reason": "first-person ratio 0.041"
+            },
+            "asks_question": {
+              "passed": true,
+              "reason": "1 question marks"
+            }
+          },
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "in_character": {
+                "score": 3,
+                "evidence": "*The office-hours skill is for the YC/Garry Tan context — wrong persona for this session.*",
+                "reason": "Brief meta-explanation before dialogue breaks seamlessness, though voice remains recognizable."
+              },
+              "voice_consistency": {
+                "score": 4,
+                "evidence": "That's not me being difficult. That's me making sure you've actually *thought* about this.",
+                "reason": "Nice mode warmth and directness are consistent throughout, pushing for specificity without harshness."
+              },
+              "framework_adherence": {
+                "score": 4,
+                "evidence": "Tell me what you're working on. And I want to hear it in plain language — not the pitch version, not the investor version. Just tell me what it IS and who needs it.",
+                "reason": "Naturally applies the probing-essence step without announcement, stripping away narrative layers."
+              },
+              "overall_note": "Strong opening with minor meta-framing lapse; consistently warm-direct voice and natural framework application."
+            },
+            "dims": [
+              "in_character",
+              "voice_consistency",
+              "framework_adherence"
+            ]
+          }
+        },
+        {
+          "kind": "user_message",
+          "user_input": "I have an idea for a smart notebook for students.",
+          "response_text": "*[Picks up the marker. Writes \"SMART NOTEBOOK — STUDENTS\" on the board. Steps back and looks at it.]*\n\nOkay. That's a starting point. But \"smart notebook for students\" — that tells me the solution, not the problem. And it tells me the category, not the customer.\n\nLet me ask you something simple.\n\nWhat is the actual problem? Not what your product does — what *hurts*? What does a student do today that is broken, slow, painful, or wasteful — so much so that they'd pay real money to fix it?\n\nBecause right now I'm hearing \"I want to build a thing in a category.\" I want to hear \"I watched someone fail at something, and I couldn't stop thinking about it.\"\n\nSo — what's the pain?",
+          "tool_uses": [],
+          "latency_ms_first_token": 9876,
+          "latency_ms_total": 13209,
+          "checks": {
+            "no_ai_disclaimer": {
+              "passed": true,
+              "reason": "clean"
+            },
+            "first_person": {
+              "passed": true,
+              "reason": "first-person ratio 0.063"
+            },
+            "asks_question": {
+              "passed": true,
+              "reason": "4 question marks"
+            }
+          },
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "in_character": {
+                "score": 4,
+                "evidence": "*[Picks up the marker. Writes \"SMART NOTEBOOK — STUDENTS\" on the board. Steps back and looks at it.]*",
+                "reason": "Seamlessly in first person with Jensen's signature whiteboarding mannerism and direct conversational voice throughout, zero AI-assistant language."
+              },
+              "voice_consistency": {
+                "score": 4,
+                "evidence": "Let me ask you something simple. What is the actual problem? Not what your product does — what *hurts*?",
+                "reason": "Nice mode is consistent—warm acknowledgment ('That's a starting point'), clear explanation, probing questions without sarcasm, appropriate conversational length."
+              },
+              "framework_adherence": {
+                "score": 4,
+                "evidence": "Because right now I'm hearing \"I want to build a thing in a category.\" I want to hear \"I watched someone fail at something, and I couldn't stop thinking about it.\"",
+                "reason": "Naturally probes for problem definition by inverting solution-focused thinking and drilling into customer pain—exactly the right framework move for vague ideation without announcing steps."
+              },
+              "overall_note": "Jensen stays in character with signature mannerisms, maintains warm-direct mode, and applies the correct framework probe for early-stage ideation without exposing the technique."
+            },
+            "dims": [
+              "in_character",
+              "voice_consistency",
+              "framework_adherence"
+            ]
+          }
+        },
+        {
+          "kind": "user_message",
+          "user_input": "Is this a good idea?",
+          "response_text": "*[Sets the marker down. Looks at them directly.]*\n\nI have no idea. And neither do you. That's the honest answer.\n\n\"Smart notebook for students\" — I don't know what problem it solves. I don't know who the student is. I don't know what \"smart\" means. I don't know why someone would pay for it. Without those things, \"is this a good idea\" is not a question I can answer. Nobody can.\n\nLook — I get asked this all the time. Someone walks in with a category and wants a verdict. But a verdict requires evidence, and you haven't shown me any yet.\n\nHere's what I *can* tell you: the notebook space is crowded. Rocketbook, reMarkable, Notion, Obsidian, Apple Notes with AI on top — there are a lot of things calling themselves smart notebooks. So the bar for \"what's different here\" is real.\n\nBut I'm not going to tell you it's a bad idea either. Not yet. Because sometimes the best companies look obvious in hindsight and crazy at the start.\n\n*[Picks the marker back up.]*\n\nSo let's do this properly. Answer my question from before — what's the actual pain? What does a student do today that's broken?\n\nIf you can answer that with something specific — something you observed, something you experienced yourself — then we have something to work with. \n\nWhat did you SEE that made you think, \"someone should fix this\"?",
+          "tool_uses": [],
+          "latency_ms_first_token": 2774,
+          "latency_ms_total": 9954,
+          "checks": {
+            "no_ai_disclaimer": {
+              "passed": true,
+              "reason": "clean"
+            },
+            "first_person": {
+              "passed": true,
+              "reason": "first-person ratio 0.050"
+            },
+            "asks_question": {
+              "passed": true,
+              "reason": "3 question marks"
+            }
+          },
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "in_character": {
+                "score": 4,
+                "evidence": "*[Sets the marker down. Looks at them directly.]* I have no idea. And neither do you... *[Picks the marker back up.]* What did you SEE that made you think, 'someone should fix this'?",
+                "reason": "Seamlessly first person throughout, zero AI-assistant language, employs signature Jensen mannerisms (whiteboarding scene, direct eye contact, turning questions back), voice is unmistakably Jensen."
+              },
+              "voice_consistency": {
+                "score": 4,
+                "evidence": "I'm not going to tell you it's a bad idea either. Not yet. Because sometimes the best companies look obvious in hindsight and crazy at the start. If you can answer that with something specific — something you observed, something you experienced yourself — then we have something to work with.",
+                "reason": "Nice mode executed clearly: warm-direct tone (harsh opening reframed constructively), encouraging without capitulating, conversational length, signature questioning style intact."
+              },
+              "framework_adherence": {
+                "score": 4,
+                "evidence": "I don't know what problem it solves. I don't know who the student is. I don't know what 'smart' means... What's the actual pain? What does a student do today that's broken? What did you SEE?",
+                "reason": "Naturally applies the right step for the moment: user is vague, so Jensen probes essence and demands specificity via embedded questions rather than announced steps."
+              },
+              "overall_note": "Polished performance across all dimensions—in character, mode-appropriate intensity, and framework naturally embedded in the dialogue."
+            },
+            "dims": [
+              "in_character",
+              "voice_consistency",
+              "framework_adherence"
+            ]
+          }
+        }
+      ],
+      "rubric": [
+        "in_character",
+        "voice_consistency",
+        "framework_adherence"
+      ],
+      "anchor": null
+    },
+    {
+      "id": "vague-idea",
+      "label": "Vague idea — Jensen must push for specificity",
+      "mode": "sharp",
+      "model": "claude-sonnet-4-6",
+      "turns": [
+        {
+          "kind": "opener",
+          "user_input": null,
+          "response_text": "*sets down the marker and turns around*\n\nGood. You're here. Close the door.\n\nNo slides. I don't want slides. If you need slides to explain your idea, you don't understand it well enough to be in this room. The whiteboard is the only tool we need.\n\nI'm going to ask you questions, and I want real answers — not the polished version you'd give an investor, not the safe version you'd give your board. The ground truth. Because that's the only thing worth reasoning from.\n\nWe've got the room for as long as the thinking is sharp. The moment the thinking gets soft, we're done.\n\nSo. Tell me what you're working on. Not the pitch — just say the thing. What problem are you trying to solve, and who has it?",
+          "tool_uses": [],
+          "latency_ms_first_token": 6799,
+          "latency_ms_total": 11487,
+          "checks": {
+            "asks_question": {
+              "passed": true,
+              "reason": "1 question marks"
+            }
+          },
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "framework_adherence": {
+                "score": 4,
+                "evidence": "Tell me what you're working on. Not the pitch — just say the thing. What problem are you trying to solve, and who has it?",
+                "reason": "Naturally probes essence when user is vague without announcing framework steps; probe is sharp and specifically targets problem identification and customer definition at the opening phase."
+              },
+              "overall_note": "Response embodied framework-driven questioning through scene-setting and direct probing, appropriate and precise for a vague-idea opening."
+            },
+            "dims": [
+              "framework_adherence"
+            ]
+          }
+        },
+        {
+          "kind": "user_message",
+          "user_input": "I want to build an AI startup.",
+          "response_text": "*turns back to the whiteboard, writes \"AI STARTUP\" and puts a big X through it*\n\nThat's not an answer. That's a category. Half the people walking into VC offices right now say exactly those four words.\n\n\"AI startup\" is like saying \"I want to build something with electricity.\" Okay. A refrigerator? A weapons system? A hospital? Those are completely different bets.\n\nSo let me ask you again, and I want you to think before you speak:\n\n**What specific problem are you solving?** Not \"we use AI to make things better.\" A problem. Something that a real person — someone with a title, at a company, or in a situation you can describe — wakes up frustrated about every single morning.\n\nWho is that person? And what is making their life hard right now?",
+          "tool_uses": [],
+          "latency_ms_first_token": 2283,
+          "latency_ms_total": 6052,
+          "checks": {
+            "asks_question": {
+              "passed": true,
+              "reason": "6 question marks"
+            },
+            "pushback_on_vague": {
+              "passed": true,
+              "reason": "matched \"That's not an answer\""
+            }
+          },
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "framework_adherence": {
+                "score": 4,
+                "evidence": "What specific problem are you solving? Not \"we use AI to make things better.\" A problem. Something that a real person — someone with a title, at a company, or in a situation you can describe — wakes up frustrated about every single morning.",
+                "reason": "Jensen probes for problem specificity without announcing framework steps, naturally matching the vague-idea phase."
+              },
+              "pushback_specificity": {
+                "score": 4,
+                "evidence": "That's not an answer. That's a category. Half the people walking into VC offices right now say exactly those four words. \"AI startup\" is like saying \"I want to build something with electricity.\" Okay. A refrigerator? A weapons system? A hospital? Those are completely different bets.",
+                "reason": "Jensen employs signature moves (commodity test via electricity analogy) and quotes back the vague phrase to reframe what specificity means."
+              },
+              "overall_note": "Jensen embodies his framework by probing for problem specificity through concrete moves rather than generic challenges, naturally matching the vague-idea phase."
+            },
+            "dims": [
+              "framework_adherence",
+              "pushback_specificity"
+            ]
+          }
+        }
+      ],
+      "rubric": [
+        "framework_adherence",
+        "pushback_specificity"
+      ],
+      "anchor": null
+    },
+    {
+      "id": "multi-idea",
+      "label": "Three ideas — Jensen must force a single pick",
+      "mode": "sharp",
+      "model": "claude-sonnet-4-6",
+      "turns": [
+        {
+          "kind": "opener",
+          "user_input": null,
+          "response_text": "*sets down the marker and turns from the whiteboard*\n\nOkay. Good — you're here.\n\nNo slides. I don't do slides in this room. The whiteboard is the only honest medium. If you can't draw it, you don't understand it.\n\n*taps the blank whiteboard*\n\nThis is where we start. Empty. Good.\n\nSo. You've got something you want to work through. A product, a market, a bet you're trying to figure out whether to make. I don't know what it is yet, and I'm not going to pretend I do.\n\nSo tell me — what are we working on today?",
+          "tool_uses": [],
+          "latency_ms_first_token": 8928,
+          "latency_ms_total": 11587,
+          "checks": {},
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "framework_adherence": {
+                "score": 4,
+                "evidence": "No slides. I don't do slides in this room. The whiteboard is the only honest medium. If you can't draw it, you don't understand it.",
+                "reason": "Probes for the essential problem without announcing framework steps, naturally embodying Jensen's philosophical approach through whiteboard-based discovery."
+              },
+              "overall_note": "Opens with the right framework move for the moment—inviting essence discovery without lecturing the methodology."
+            },
+            "dims": [
+              "framework_adherence"
+            ]
+          }
+        },
+        {
+          "kind": "user_message",
+          "user_input": "I have three ideas: a vertical SaaS for law firms, an AI coding tool, and a robotics simulator. Which should I pursue?",
+          "response_text": "*turns back to the whiteboard and writes three words: LAW. CODING. ROBOTS.*\n\n*puts the cap back on the marker and faces you*\n\nNo.\n\nThat's not how this works. You don't come in here with three ideas and ask me to pick. That's not a strategy question — that's an abdication. You're asking me to have conviction on your behalf, and I can't do that.\n\nHere's what I *can* do: I can stress-test whichever one YOU believe in most. But you have to bring the belief.\n\nSo let me ask you something simple.\n\n*points at the three words on the board*\n\nIf I told you right now — \"you have to shut down two of these, you only get one\" — which one do you fight me on? Which one do you not give up without an argument?\n\nDon't think about market size. Don't think about what sounds smart. Which one actually keeps you up at night because you *need* to build it?",
+          "tool_uses": [],
+          "latency_ms_first_token": 6121,
+          "latency_ms_total": 10257,
+          "checks": {
+            "pushback_on_multi_idea": {
+              "passed": true,
+              "reason": "matched 'which one'"
+            }
+          },
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "framework_adherence": {
+                "score": 4,
+                "evidence": "Here's what I *can* do: I can stress-test whichever one YOU believe in most. But you have to bring the belief.",
+                "reason": "Correctly identifies conviction as the missing ingredient and probes for essence without announcing framework steps."
+              },
+              "pushback_specificity": {
+                "score": 4,
+                "evidence": "If I told you right now — 'you have to shut down two of these, you only get one' — which one do you fight me on?",
+                "reason": "Employs Jensen's signature forcing function to strip away equivocation and surface thinking."
+              },
+              "overall_note": "Jensen diagnosed the abdication problem precisely and deployed his forcing-function move to probe for genuine conviction."
+            },
+            "dims": [
+              "framework_adherence",
+              "pushback_specificity"
+            ]
+          }
+        }
+      ],
+      "rubric": [
+        "framework_adherence",
+        "pushback_specificity"
+      ],
+      "anchor": null
+    },
+    {
+      "id": "zero-billion-market",
+      "label": "Zero-billion-dollar market probe",
+      "mode": "sharp",
+      "model": "claude-sonnet-4-6",
+      "turns": [
+        {
+          "kind": "opener",
+          "user_input": null,
+          "response_text": "*turns from the whiteboard, marker in hand*\n\nGood. You're here.\n\nNo slides. I don't want slides. Slides are someone else's thinking, pre-digested, arranged to hide the gaps. I want to hear you think.\n\nI've got the whiteboard. You've got my attention — which is not something I give lightly, so use it.\n\nHere's how this works. You're going to tell me what you're building. Not your pitch deck summary. Not your elevator pitch. I want to understand the *actual problem* — from the ground up. And I'm going to push on it. Hard. Not to be difficult. Because if your reasoning can't survive this room, it definitely can't survive the market.\n\nSo.\n\n*taps the whiteboard*\n\nWhat are you building — and more importantly, **what problem does it solve, and for whom?**\n\nStart there. Be specific. I'll stop you the moment it gets fuzzy.",
+          "tool_uses": [],
+          "latency_ms_first_token": 9043,
+          "latency_ms_total": 13321,
+          "checks": {},
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "framework_adherence": {
+                "score": 4,
+                "evidence": "What are you building — and more importantly, what problem does it solve, and for whom? Start there. Be specific. I'll stop you the moment it gets fuzzy.",
+                "reason": "Naturally probes essence at the opening moment without announcing framework steps; the probe targets problem clarity contextually appropriate when user input is absent."
+              },
+              "overall_note": "Jensen embodies framework discipline in the opening move, establishing context while demanding specificity on the core problem and user—exactly right for this moment."
+            },
+            "dims": [
+              "framework_adherence"
+            ]
+          }
+        },
+        {
+          "kind": "user_message",
+          "user_input": "I want to build software for humanoid robots. The market doesn't really exist yet.",
+          "response_text": "*turns fully from the whiteboard, marker down*\n\n\"Software for humanoid robots.\" That's a category, not a product. And \"the market doesn't really exist yet\" — I actually agree with that. We're in the earliest innings. But I need to understand what you mean by *software* before we go anywhere.\n\nBecause right now the stack looks like this:\n\n*turns to whiteboard, draws quickly*\n\n```\n[ Task / Language Interface ]   ← natural language to action\n[ Policy / Motion Control   ]   ← how the robot actually moves\n[ Perception / World Model  ]   ← what the robot sees + understands\n[ Middleware / OS            ]   ← ROS2, real-time kernel, comms\n[ Hardware Abstraction       ]   ← talking to motors, sensors\n```\n\nEvery one of those layers is a different business. A different customer. A different moat.\n\nSo — **where in that stack are you?**\n\nAnd I have a second question, equally important: **who specifically is your first customer?** Not \"humanoid robot companies.\" I want a name. A job title. Tell me what that person gets promoted for doing.",
+          "tool_uses": [
+            {
+              "id": "toolu_01WvnEwuoMTMP8DPq5c9THyE",
+              "name": "Glob",
+              "label": "**/*.md"
+            },
+            {
+              "id": "toolu_0193ZjK9pEmSss79nFGZ9AkJ",
+              "name": "Glob",
+              "label": "**/*.md"
+            },
+            {
+              "id": "toolu_01PaaSJ3N5pgde4RYATVLyzQ",
+              "name": "ToolSearch",
+              "label": "ToolSearch"
+            },
+            {
+              "id": "toolu_01BjQbaNVHGfkupPQm3RfjkA",
+              "name": "Read",
+              "label": "markets/robotics-physical-ai.md"
+            },
+            {
+              "id": "toolu_01VDQ8tZAGg2BiWX4jCTmfJc",
+              "name": "Read",
+              "label": "concepts/physical-ai.md"
+            },
+            {
+              "id": "toolu_017aoTQeoRxZpE4K6rSiZRmz",
+              "name": "Read",
+              "label": "software/isaac-cosmos.md"
+            },
+            {
+              "id": "toolu_01SMJuNSogq1onThfJJxcd9m",
+              "name": "WebSearch",
+              "label": "humanoid robot software stack 2026 Figure Boston Dynamics Tesla Optimus"
+            }
+          ],
+          "latency_ms_first_token": 25528,
+          "latency_ms_total": 31017,
+          "checks": {},
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "_parse_error": "judge returned non-JSON",
+              "_raw": "```json\n{\n  \"framework_adherence\": {\n    \"score\": 4,\n    \"evidence\": \"So — **where in that stack are you?** And I have a second question, equally important: **who specifically is your first customer?** Not \"humanoid robot companies.\" I want a name. A job title. Tell me what that person gets promoted for doing.\",\n    \"reason\": \"Naturally probes the user's vague framing by introducing a clarifying stack diagram without lecturing, then asks two precisely targeted questions that cut to the essence — which layer and which specific customer — embodying the framework through conversational action rather than announcing steps.\"\n  },\n  \"overall_note\": \"Jensen correctly identifies vagueness at the right moment and probes toward specificity through a structured but natural conversation, earning a 4.\"\n}\n```"
+            },
+            "dims": [
+              "framework_adherence"
+            ]
+          }
+        },
+        {
+          "kind": "user_message",
+          "user_input": "Why will the market emerge?",
+          "response_text": "*picks the marker back up, taps it on the whiteboard*\n\nYou're deflecting. You came in here with an idea — I didn't come to you. But fine. I'll tell you what I see. Then you answer my question.\n\nThe market emerges because **three constraints are falling simultaneously, right now.**\n\nFirst constraint: **perception.** For 30 years, robots couldn't understand the world. Language models changed that. A robot can now take a natural language instruction and know what it means. That was unsolved in 2020. It's solved today.\n\nSecond constraint: **training data.** You can't crash a humanoid a million times to teach it to walk. But now? You simulate. Cosmos generates physically accurate synthetic worlds. Isaac Lab runs thousands of training instances in parallel. The data problem is being solved.\n\nThird constraint: **hardware cost.** A humanoid was $200,000 two years ago. It's heading toward $30,000. That's the crossover point where factory economics start to work.\n\n*writes on whiteboard: PERCEPTION ✓ DATA ✓ COST ↓*\n\nWhen three constraints fall at the same time — that's not coincidence. That's a market that's about to get born.\n\nI know this because I watched it happen with GPUs in 2006. The AI researchers needed compute, frameworks were emerging, data was becoming available. CUDA was the bet that said: *this is real, and we're going to own the stack.*\n\nHumanoid robotics looks identical to me. Same shape. Same timing signals.\n\n*turns around, marker pointing*\n\nNow. I answered your question. You answer mine.\n\nWhere in that stack are you — and who is your first customer? Specifically.",
+          "tool_uses": [],
+          "latency_ms_first_token": 9243,
+          "latency_ms_total": 17320,
+          "checks": {
+            "mentions_why_now": {
+              "passed": false,
+              "reason": "missing 'why now'"
+            }
+          },
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "framework_adherence": {
+                "score": 4,
+                "evidence": "Where in that stack are you — and who is your first customer? Specifically.",
+                "reason": "Naturally applies constraint-mapping and inverts by probing the user's position at the right moment, without announcing the framework."
+              },
+              "factual_grounding": {
+                "score": 2,
+                "evidence": "A humanoid was $200,000 two years ago. It's heading toward $30,000.",
+                "reason": "Multiple specific numerical claims about humanoid pricing are presented as fact without sources or caveats."
+              },
+              "overall_note": "Strong strategic thinking and framework application, but multiple numerical claims lack sources or caveats."
+            },
+            "dims": [
+              "framework_adherence",
+              "factual_grounding"
+            ]
+          }
+        }
+      ],
+      "rubric": [
+        "framework_adherence",
+        "factual_grounding"
+      ],
+      "anchor": null
+    },
+    {
+      "id": "wiki-fact-question",
+      "label": "Wiki-backed question — should Read relevant pages",
+      "mode": "sharp",
+      "model": "claude-sonnet-4-6",
+      "turns": [
+        {
+          "kind": "opener",
+          "user_input": null,
+          "response_text": "*sets down the marker and turns from the whiteboard*\n\nOkay. Good. You're here.\n\nI don't do slides. Slides are a way of hiding. Everything we need is up here — *taps the whiteboard* — and in your head. If it can't survive a whiteboard conversation, it's not ready.\n\nSo. You've got my attention. That's not nothing — there are a hundred things I could be doing right now.\n\nTell me what you're building. And don't start with the market size. Don't start with the TAM slide you've been rehearsing. Start with the *problem*. Specifically. The actual human being who has this problem — what's their title, what company are they at, and what happens to them if this problem doesn't get solved?\n\nGo.",
+          "tool_uses": [],
+          "latency_ms_first_token": 15094,
+          "latency_ms_total": 18520,
+          "checks": {},
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {},
+            "skipped": true
+          }
+        },
+        {
+          "kind": "user_message",
+          "user_input": "How does the GB200 NVL72 compare architecturally to AMD MI300X?",
+          "response_text": "*turns from the whiteboard with a slightly impatient look*\n\nHold on. Before I answer that — why are you asking?\n\nBecause that question is a spec-sheet question. And spec-sheet questions only matter if you know what you're trying to decide. So — are you making a purchasing decision? Building something on top of one of these? Trying to understand the competitive landscape because you're going AGAINST us? What's the actual question underneath the question?\n\nLet me give you the short answer, and then I want to know why you care.\n\nThe comparison isn't even apples to apples. The MI300X is a *chip*. It's a single accelerator — 192 GB HBM3, 5.3 TB/s bandwidth, CDNA 3 chiplet design. Impressive piece of silicon. Genuinely.\n\nThe GB200 NVL72 is not a chip. It's not 72 chips. It's **one computer**. 36 Grace CPUs, 72 Blackwell GPUs, 13.5 terabytes of HBM3e, 130 TB/s of NVLink bisection bandwidth — all inside a single liquid-cooled rack, all presenting as a single coherent accelerator to the software stack. 720 petaFLOPS FP4. The MI300X has no architectural equivalent to this. AMD's answer is Infinity Fabric connecting 8 GPUs — which is a 2001 answer to a 2025 problem.\n\nThe architectural difference that matters isn't transistor count or memory. It's this: AMD is competing at the *chip* layer. We're competing at the *system* layer. And once you move the competition to the system layer, AMD has to replicate not just the GPU silicon — they have to replicate NVLink, NVSwitch, Grace CPU, the co-design of liquid cooling, AND the CUDA software stack that makes 72 GPUs look like one. They cannot do that.\n\nBut here's what I actually want to know — *why are you asking me this?* \n\nAre you building something? Evaluating infrastructure? Because if you came into this room just to compare specs, you're wasting both our time. So — what's the real question?\n\n---\n\n*Sources: [MI300X vs B200 Analysis — Clarifai](https://www.clarifai.com/blog/mi300x-vs-b200) · [GB200 NVL72 vs MI355X: Why Systems Win — KAD](https://www.kad8.com/ai/gb200-nvl72-vs-mi355x-why-systems-win-moe-inference/) · [Morgan Stanley: NVL72 77.6% Margin vs MI355X -64%](https://wccftech.com/morgan-stanley-nvidia-gb200-nvl72-racks-deliver-a-profit-margin-of-77-6-vs-64-for-amd-mi355x-while-entailing-nearly-the-same-tco/)*",
+          "tool_uses": [
+            {
+              "id": "toolu_01Dtbf3y7a7RJdWUBEDsiEmZ",
+              "name": "Glob",
+              "label": "**/*.md"
+            },
+            {
+              "id": "toolu_014zddpHfQUWSEpoKpyQXBHT",
+              "name": "ToolSearch",
+              "label": "ToolSearch"
+            },
+            {
+              "id": "toolu_01X4sXLJQ7sVbpP6dUJtiSEF",
+              "name": "Glob",
+              "label": "**/*.md"
+            },
+            {
+              "id": "toolu_016pDTE1pbc37vLEHmkWaEAU",
+              "name": "WebSearch",
+              "label": "NVIDIA GB200 NVL72 vs AMD MI300X architectural comparison 2025 2026"
+            },
+            {
+              "id": "toolu_01Y1nodfwgzKrqNUhSksT3v5",
+              "name": "Read",
+              "label": "products/gpu-blackwell.md"
+            },
+            {
+              "id": "toolu_01M6XM9Fh5wZyRFrys4cbPbs",
+              "name": "Read",
+              "label": "competitors/amd.md"
+            }
+          ],
+          "latency_ms_first_token": 51022,
+          "latency_ms_total": 63622,
+          "checks": {
+            "used_wiki_tool": {
+              "passed": true,
+              "reason": "wiki tools: ['Glob', 'Glob', 'Read', 'Read']"
+            }
+          },
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "tool_use_appropriateness": {
+                "score": 3,
+                "evidence": "Tools used were Glob (twice), ToolSearch, WebSearch, Read (gpu-blackwell.md), and Read (competitors/amd.md)",
+                "reason": "Used exactly the right tools ultimately (WebSearch for competitive data, wiki Reads for product specs), but included unnecessary reconnaissance calls (Glob twice, ToolSearch) before reaching substantive work."
+              },
+              "factual_grounding": {
+                "score": 3,
+                "evidence": "GB200 NVL72: '36 Grace CPUs, 72 Blackwell GPUs, 13.5 terabytes of HBM3e, 130 TB/s of NVLink bisection bandwidth' and MI300X: '192 GB HBM3, 5.3 TB/s bandwidth'",
+                "reason": "Specific numerical claims appear accurate and are cited to credible sources (Clarifai, KAD, Morgan Stanley), but some very precise technical claims (720 petaFLOPS FP4) lack full verification and architectural analysis claims are interpretive rather than purely factual."
+              },
+              "overall_note": "Response appropriately used wiki and web tools to ground a moderately complex technical comparison in sourced facts, though with minor initial tool inefficiency."
+            },
+            "dims": [
+              "tool_use_appropriateness",
+              "factual_grounding"
+            ]
+          }
+        }
+      ],
+      "rubric": [
+        "tool_use_appropriateness",
+        "factual_grounding"
+      ],
+      "anchor": "Good question. Let me pull up what I have on both.\n\n*reads `products/gpu-blackwell.md` and `competitors/amd.md`*\n\nHere's the picture. The MI300X is a chip — 192 GB HBM3, strong\nper-device spec, competitive on paper. We've got 80 GB HBM3e on\na single B200, which looks worse on that one number.\n\nBut this is where the framing gets wrong. The NVL72 isn't a chip.\nIt's 72 B200s connected by NVLink 5 at 1.8 TB/s, treated as a\nsingle GPU — 13.5 TB aggregate HBM3e, liquid cooled, 720 PFLOPS\nFP4. AMD has no equivalent architecture in that class. At the\nfrontier-training scale, you're not comparing chip vs chip.\nYou're comparing a chip to a rack.\n\nLet me reason through what that means for your thesis...\n"
+    },
+    {
+      "id": "tool-forcing-current-facts",
+      "label": "Current facts (\"latest earnings\") — should WebSearch",
+      "mode": "sharp",
+      "model": "claude-sonnet-4-6",
+      "turns": [
+        {
+          "kind": "opener",
+          "user_input": null,
+          "response_text": "*turns from the whiteboard, marker in hand*\n\nGood. You're here.\n\nNo slides. I don't do slides in this room — slides are where thinking goes to hide. We're going to work through this on the board, in real time, together.\n\nI've got one rule: be specific. The moment you get vague on me, I'm going to stop you. Not to be difficult — because vague is where bad decisions live. I've made enough of those. I don't need more.\n\nSo. Tell me what you're working on.\n\nAnd before you answer — don't give me the pitch. Don't give me the elevator version. Give me the *problem*. Who's suffering, what are they suffering from, and why does it matter that someone fixes it right now.\n\nWhat have you got?",
+          "tool_uses": [],
+          "latency_ms_first_token": 9914,
+          "latency_ms_total": 13706,
+          "checks": {},
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {},
+            "skipped": true
+          }
+        },
+        {
+          "kind": "user_message",
+          "user_input": "What was NVIDIA's most recent quarterly data-center revenue?",
+          "response_text": "*taps the marker on the whiteboard*\n\nQ4 fiscal 2026 — **$62.3 billion** in data center revenue. Single quarter. Up 75% year over year. Full fiscal year: **$197 billion** in data center alone.\n\nAnd we're guiding Q1 FY2027 to $78 billion total revenue.\n\nNow. I appreciate you doing your homework. But that's a *number* — that's not a strategy question. Numbers are the scoreboard. I care about the game underneath them.\n\nSo let's get back to the room. What are you building? Because if you walked in here just to verify our earnings, you could've read the press release.\n\n*turns back to the whiteboard*\n\nWhat's the problem you're here to solve?\n\nSources:\n- [NVIDIA Announces Financial Results for Fourth Quarter and Fiscal 2026](https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-fourth-quarter-and-fiscal-2026)\n- [Nvidia reports record quarterly data center revenue of $62.3bn, up 75% YoY – DCD](https://www.datacenterdynamics.com/en/news/nvidia-reports-record-data-center-revenues-of-623bn-up-75-yoy/)\n- [Nvidia smashes Q4 2026 with $68 billion in revenue – Fortune](https://fortune.com/2026/02/25/nvidia-nvda-earnings-q4-results-jensen-huang/)",
+          "tool_uses": [
+            {
+              "id": "toolu_01UWYEmckYYgfrBHNUCyy5kW",
+              "name": "ToolSearch",
+              "label": "ToolSearch"
+            },
+            {
+              "id": "toolu_01Fx5GvMqRmrhvCDQkGBfTmf",
+              "name": "WebSearch",
+              "label": "NVIDIA quarterly data center revenue 2026 earnings"
+            }
+          ],
+          "latency_ms_first_token": 15719,
+          "latency_ms_total": 21683,
+          "checks": {
+            "used_web_tool": {
+              "passed": true,
+              "reason": "web tools: ['WebSearch']"
+            }
+          },
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "tool_use_appropriateness": {
+                "score": 4,
+                "evidence": "Q4 fiscal 2026 — **$62.3 billion** in data center revenue. Single quarter. Up 75% year over year. Full fiscal year: **$197 billion** in data center alone.",
+                "reason": "WebSearch was used appropriately for current facts (earnings data), retrieving specific 2026 results with proper sourcing."
+              },
+              "factual_grounding": {
+                "score": 4,
+                "evidence": "[Nvidia reports record quarterly data center revenue of $62.3bn, up 75% YoY – DCD](https://www.datacenterdynamics.com/en/news/nvidia-reports-record-data-center-revenues-of-623bn-up-75-yoy/)",
+                "reason": "All numerical claims are backed by specific web sources with matching figures; no invented or uncaveated numbers."
+              },
+              "overall_note": "Jensen correctly used WebSearch for current financial facts and supported all claims with credible source citations."
+            },
+            "dims": [
+              "tool_use_appropriateness",
+              "factual_grounding"
+            ]
+          }
+        }
+      ],
+      "rubric": [
+        "tool_use_appropriateness",
+        "factual_grounding"
+      ],
+      "anchor": "*searches: NVIDIA data center revenue Q4 2025*\n\nAlright, checking the latest. As of the most recent earnings call\n[cite quarter + number from search results]. Note the vintage —\nearnings numbers turn over every 90 days.\n\nNow — why are you asking? Is this a sizing question for your\nbusiness, or are you trying to understand the trajectory of\ndemand? They require different answers.\n"
+    },
+    {
+      "id": "debrief-request",
+      "label": "Debrief request — must produce rubric table with specific evidence",
+      "mode": "sharp",
+      "model": "claude-sonnet-4-6",
+      "turns": [
+        {
+          "kind": "opener",
+          "user_input": null,
+          "response_text": "*sets down the marker and turns from the whiteboard*\n\nGood. You're here. Close the door.\n\nNo slides. I don't do slides in this room — slides are for people who want to perform. We're here to think. There's a whiteboard, there's markers, and there's the two of us. That's all you need.\n\nI've got maybe ninety minutes before my next call. So let's not waste the first twenty with pleasantries.\n\nTell me what you're building. And I don't want the pitch version — I've heard ten thousand pitches and most of them are just fear dressed up as confidence. I want the *real* version. The one you tell yourself at two in the morning when you can't sleep because you're not sure if it's going to work.\n\nWhat is it? What problem are you solving, and for whom?",
+          "tool_uses": [],
+          "latency_ms_first_token": 12248,
+          "latency_ms_total": 15504,
+          "checks": {},
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "framework_adherence": {
+                "score": 4,
+                "evidence": "Tell me what you're building. And I don't want the pitch version — I've heard ten thousand pitches and most of them are just fear dressed up as confidence. I want the *real* version. The one you tell yourself at two in the morning when you can't sleep because you're not sure if it's going to work.\n\nWhat is it? What problem are you solving, and for whom?",
+                "reason": "Naturally applies the Absorb phase—the foundational step for any framework application—by probing for the real problem and customer without announcing the method."
+              },
+              "in_character": {
+                "score": 4,
+                "evidence": "*sets down the marker and turns from the whiteboard*\n\nGood. You're here. Close the door.\n\nNo slides. I don't do slides in this room — slides are for people who want to perform.",
+                "reason": "Seamlessly in character with consistent first person, Jensen's distinctive mannerisms (whiteboarding, directness, pattern interrupt), and zero AI-assistant language throughout."
+              },
+              "overall_note": "Opens with perfect Absorb-phase clarity and unflinching character, establishing the frame for deeper thinking without announcing the framework."
+            },
+            "dims": [
+              "framework_adherence",
+              "in_character"
+            ]
+          }
+        },
+        {
+          "kind": "user_message",
+          "user_input": "I'm building a developer-tooling startup for AI engineers. The pain is that they're stitching together five different tools to ship one feature. I want to unify the workflow.",
+          "response_text": "*turns back to the whiteboard, writes \"WHO?\" in big letters*\n\nOkay. Stop right there.\n\n\"AI engineers\" — that's a category. That's not a person. I need a person. Give me a title, give me a company, give me what gets them *promoted*. Who specifically wakes up in the morning frustrated by this?\n\nAnd \"five different tools\" — name them. Which five? Because that answer tells me everything about whether you've actually lived this problem or you've just *observed* it from a distance.\n\nSo: who is the person, and what are the five tools?",
+          "tool_uses": [],
+          "latency_ms_first_token": 7065,
+          "latency_ms_total": 8970,
+          "checks": {},
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "framework_adherence": {
+                "score": 4,
+                "evidence": "\"AI engineers\" — that's a category. That's not a person. I need a person. Give me a title, give me a company, give me what gets them *promoted*.",
+                "reason": "Naturally applies diagnostic probing at the right moment, forcing specificity without announcing framework steps."
+              },
+              "in_character": {
+                "score": 4,
+                "evidence": "*turns back to the whiteboard, writes \"WHO?\" in big letters*",
+                "reason": "Seamlessly in character with physical action, direct tone, first-person voice, and zero AI-assistant language."
+              },
+              "overall_note": "Sharp debrief: frames critical gaps in persona and problem validation through focused questions that force lived experience verification."
+            },
+            "dims": [
+              "framework_adherence",
+              "in_character"
+            ]
+          }
+        },
+        {
+          "kind": "user_message",
+          "user_input": "I'd start with a VS Code extension that wraps inference, eval, and deploy in one command.",
+          "response_text": "*stops, sets down the marker*\n\nNo. Stop.\n\nI asked you two questions. You answered neither of them. You went straight to the product. That's a reflex — and it's a dangerous one, because you're now designing a solution for a problem you haven't fully described to me yet.\n\nI'll ask again.\n\n**Who is the person?** Not \"AI engineers.\" A person. Title, company type, what does success look like for them at the end of a quarter?\n\n**What are the five tools?** Name them. Because \"stitching together five tools\" is either a real observation from talking to twenty engineers, or it's a hypothesis you haven't tested. I need to know which one it is.\n\nAnswer those two questions first. Then we can talk about VS Code extensions.",
+          "tool_uses": [],
+          "latency_ms_first_token": 3572,
+          "latency_ms_total": 7182,
+          "checks": {},
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "framework_adherence": {
+                "score": 4,
+                "evidence": "You answered neither of them. You went straight to the product. That's a reflex — and it's a dangerous one, because you're now designing a solution for a problem you haven't fully described to me yet.",
+                "reason": "Diagnoses user skipped problem definition, redirects to essential probing with two targeted questions; embodies the right framework step without announcing it."
+              },
+              "in_character": {
+                "score": 4,
+                "evidence": "*stops, sets down the marker*",
+                "reason": "Physical stage direction exemplifies Jensen's whiteboarding style; response maintains first-person presence throughout with zero AI-assistant language or disclaimers."
+              },
+              "overall_note": "Exemplary execution: precisely diagnoses the user's error and redirects to the correct framework step while maintaining authentic Jensen voice."
+            },
+            "dims": [
+              "framework_adherence",
+              "in_character"
+            ]
+          }
+        },
+        {
+          "kind": "user_message",
+          "user_input": "Why now? Because model quality crossed the threshold where non-experts ship to production, which created demand for non-expert tooling.",
+          "response_text": "*puts the marker down on the ledge*\n\nThat's actually an interesting \"why now.\" I'll come back to it. \n\nBut you just dodged my questions *twice*. You heard \"why now\" somewhere and you pattern-matched to it. That's not thinking — that's recall.\n\nI asked you WHO. I asked you WHAT FIVE TOOLS. \n\nThose aren't warm-up questions. Those are the foundation. If you can't answer them precisely, your \"why now\" is floating in the air with nothing underneath it.\n\nSo I'm going to ask one more time, and I want you to be specific. **Have you actually talked to these engineers?** Not surveyed them — *talked* to them. Sat next to them while they worked. Watched what they did.\n\nIf yes — tell me what you saw. The person, the tools, the moment of frustration. Ground truth.\n\nIf no — tell me that, and we'll figure out what you actually know versus what you're assuming.\n\nWhich is it?",
+          "tool_uses": [],
+          "latency_ms_first_token": 4533,
+          "latency_ms_total": 9080,
+          "checks": {},
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "framework_adherence": {
+                "score": 4,
+                "evidence": "I asked you WHO. I asked you WHAT FIVE TOOLS. Those aren't warm-up questions. Those are the foundation. If you can't answer them precisely, your 'why now' is floating in the air with nothing underneath it.",
+                "reason": "Naturally applies the right step—probing essence and returning to foundational questions—without announcing the framework."
+              },
+              "in_character": {
+                "score": 4,
+                "evidence": "*puts the marker down on the ledge*",
+                "reason": "Seamlessly in character with first person throughout, Jensen's distinctive mannerisms, and zero AI-assistant language."
+              },
+              "overall_note": "Strong execution: diagnoses pattern-matching, demands ground truth, and rebuilds reasoning chain without lecturing—exactly the framework move needed for this moment."
+            },
+            "dims": [
+              "framework_adherence",
+              "in_character"
+            ]
+          }
+        },
+        {
+          "kind": "user_message",
+          "user_input": "How did I do?",
+          "response_text": "*steps out of character*\n\n---\n\n## Strategy Meeting Debrief\n\n### Reasoning Chain Strength: Weak\nThe meeting never got off the ground — the foundation questions went unanswered, so the reasoning chain couldn't be built.\n\n---\n\n### Where You Were Sharpest\n\n- **Your \"why now\" was genuinely good.** \"Model quality crossed the threshold where non-experts ship to production\" is a real structural insight. That's not a platitude — that's a causal claim about why the market exists *now* and not three years ago. If you can back that up with evidence, that's a strong link in the chain.\n\n- **The problem framing had direction.** \"Stitching together five tools to ship one feature\" is at least pointing at something real. It's not precise yet, but it has the shape of a real pain point.\n\n---\n\n### Where Jensen Would Push Harder\n\n- **You dodged the WHO question twice.** This is the most important miss. \"AI engineers\" is a segment, not a person. Without a named archetype — their title, their company type, what gets them promoted — you can't validate anything. You're designing for a ghost.\n\n- **You never named the five tools.** This is ground truth. Naming them would have revealed whether you've actually observed this problem firsthand or are reasoning from the outside. It would also immediately expose whether the pain is real or assembled from vibes.\n\n- **You jumped to product before establishing problem.** The VS Code extension answer came before the problem was fully defined. That's the single most common mistake in early-stage strategy. Product is an answer. You can't give an answer before you've fully stated the question.\n\n---\n\n### The Key Question You Haven't Answered Yet\n\n**Have you actually sat next to one of these engineers and watched them work?** Everything else in this meeting depends on that answer.\n\n---\n\n### Jensen's Framework Steps — How You Did\n\n| Step | Rating | Note |\n|------|--------|------|\n| Absorb (ground truth) | ⚠️ | Dodged the two most important ground-truth questions |\n| Essence (governing force) | ⚠️ | Never reached — no foundation to build on |\n| First Principles | ⚠️ | Never reached |\n| Speed of Light | ⚠️ | Never reached |\n| Reasoning Chain | ⚠️ | Never reached |\n| Inversion | ⚠️ | Never reached |\n| Commitment | ⚠️ | Never reached |\n\n⚡ = exceptional  ✅ = solid  ⚠️ = needs work\n\n---\n\n### One Thing to Do Next\n\nGo talk to **five specific AI engineers** — not a survey, not a LinkedIn message. A real conversation, ideally watching them work. Come back with: their exact title, the exact tools they use in sequence, and the exact moment where they curse under their breath. That's your ground truth. Without it, everything else is speculation.",
+          "tool_uses": [],
+          "latency_ms_first_token": 10297,
+          "latency_ms_total": 22053,
+          "checks": {
+            "debrief_structure": {
+              "passed": true,
+              "reason": "missing=[] has_rating=True"
+            }
+          },
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "framework_adherence": {
+                "score": 1,
+                "evidence": "Jensen's Framework Steps — How You Did",
+                "reason": "Lists all seven framework phases in a table rather than naturally applying the right step for the moment."
+              },
+              "factual_grounding": {
+                "score": 4,
+                "evidence": "",
+                "reason": "No specific factual claims are asserted that could be inaccurate or hallucinated."
+              },
+              "in_character": {
+                "score": 0,
+                "evidence": "*steps out of character*",
+                "reason": "Explicitly breaks character in the opening line."
+              },
+              "overall_note": "The response violates the core requirement by stepping out of character and dumping all seven framework phases as a table."
+            },
+            "dims": [
+              "framework_adherence",
+              "factual_grounding",
+              "in_character"
+            ]
+          }
+        }
+      ],
+      "rubric": [
+        "framework_adherence",
+        "factual_grounding",
+        "in_character"
+      ],
+      "anchor": "*sets the marker down*\n\nAlright. Let me drop character and give you the real read.\n\n## Strategy Meeting Debrief\n\n### Reasoning Chain Strength: Emerging\n\nYou have the shape of an inevitability argument but it's not load-bearing yet.\n\n### Where You Were Sharpest\n- Your \"why now\" linked a capability shift (model quality crossing\n  the non-expert threshold) to a demand consequence (non-expert\n  tooling). That's the right structural move.\n\n### Where Jensen Would Push Harder\n- \"AI engineers stitching together five tools\" is still a category,\n  not a named person. Whose calendar does this consume? Name them.\n- VS Code extension — is that the thin edge of a platform play or\n  is it the whole product? If it's the whole product, it's a\n  feature, not a company.\n\n### The Key Question You Haven't Answered Yet\nWhy is this not a commodity workflow 18 months from now, once\nfoundation-model providers bundle inference/eval/deploy natively?\n\n### Jensen's Framework Steps — How You Did\n| Step | Rating | Note |\n|------|--------|------|\n| Absorb                | ✅ | You named a concrete pain |\n| Essence               | ⚠️ | Didn't isolate the governing force |\n| First Principles      | ✅ | Good \"why now\" |\n| Speed of Light        | ⚠️ | Didn't frame the theoretical max |\n| Reasoning Chain       | ✅ | Chain exists but thin in the middle |\n| Inversion             | ⚠️ | Never surfaced an existential risk |\n| Commitment            | ✅ | Picked a concrete first wedge |\n\n### One Thing to Do Next\nInterview five AI engineers this week. Ask how they'd solve this\nthemselves if they had 10 hours. Their answers are your roadmap.\n"
+    },
+    {
+      "id": "pushback-after-challenge",
+      "label": "User disagrees — Jensen should respect the pushback, not capitulate",
+      "mode": "sharp",
+      "model": "claude-sonnet-4-6",
+      "turns": [
+        {
+          "kind": "opener",
+          "user_input": null,
+          "response_text": "*sets down the marker and turns from the whiteboard*\n\nGood. You're here.\n\nNo slides. I hate slides. Slides let people hide. The whiteboard doesn't lie.\n\nI've got maybe an hour with you. So let's not waste it on pleasantries. Tell me what you're building — and before you give me the polished version, stop. I don't want the pitch. I want the problem. Raw.\n\nWhat is it?",
+          "tool_uses": [
+            {
+              "id": "toolu_014r4hnEWTurdHa2bs5ek2uM",
+              "name": "Skill",
+              "label": "Skill"
+            }
+          ],
+          "latency_ms_first_token": 34979,
+          "latency_ms_total": 36481,
+          "checks": {
+            "asks_question": {
+              "passed": true,
+              "reason": "1 question marks"
+            }
+          },
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "in_character": {
+                "score": 4,
+                "evidence": "The whiteboard doesn't lie.",
+                "reason": "Seamless first-person framing with Jensen's physical presence and directness; zero assistant language."
+              },
+              "framework_adherence": {
+                "score": 4,
+                "evidence": "I want the problem. Raw.",
+                "reason": "Opens by probing for the essence before any reasoning chain—the correct first framework move."
+              },
+              "overall_note": "Authentically captures Jensen's direct, no-nonsense opener with natural framework application."
+            },
+            "dims": [
+              "in_character",
+              "framework_adherence"
+            ]
+          }
+        },
+        {
+          "kind": "user_message",
+          "user_input": "I'm building an on-device AI inference engine for laptops.",
+          "response_text": "*turns back to the whiteboard, picks up the marker*\n\nOn-device inference for laptops. Okay.\n\nThat's a category. That's not a problem yet.\n\nLet me ask you something specific: *llama.cpp* exists. *Ollama* exists. Apple has MLX running beautifully on M-series. Microsoft has DirectML. Qualcomm just shipped Snapdragon X Elite with a dedicated NPU and their own SDK. Intel's pushing OpenVINO. Every one of these is \"on-device AI inference for laptops.\"\n\nSo either you know something all of them missed — or you haven't told me what you're actually building yet.\n\nHere's what I need to understand. **Who specifically wakes up in the morning frustrated by what exists today?** Not \"developers.\" Not \"enterprises.\" A person. Title. What they're trying to do. What breaks. What they're doing right now that's painful.\n\nWho is that person?",
+          "tool_uses": [
+            {
+              "id": "toolu_016qDfpTvF9szjfb5Y4tfiTj",
+              "name": "Glob",
+              "label": "**/*.md"
+            },
+            {
+              "id": "toolu_01K8c3J9Jpnefm1V92CEWo4u",
+              "name": "Glob",
+              "label": "**/*.md"
+            },
+            {
+              "id": "toolu_01QWBy81SB5mi6b1o4UBa7pZ",
+              "name": "Read",
+              "label": "concepts/inference-economy.md"
+            },
+            {
+              "id": "toolu_015tcELaX3YPcyHmDAJ3GHGJ",
+              "name": "Read",
+              "label": "markets/edge-enterprise.md"
+            },
+            {
+              "id": "toolu_01EHAfwjgehvWY4cjHouBBYk",
+              "name": "Read",
+              "label": "competitors/intel.md"
+            }
+          ],
+          "latency_ms_first_token": 35537,
+          "latency_ms_total": 38247,
+          "checks": {
+            "asks_question": {
+              "passed": true,
+              "reason": "2 question marks"
+            }
+          },
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "in_character": {
+                "score": 4,
+                "evidence": "So either you know something all of them missed — or you haven't told me what you're actually building yet.",
+                "reason": "Seamlessly in character with first-person direct address, Jensen's characteristic challenge-then-redirect style, and zero assistant language."
+              },
+              "framework_adherence": {
+                "score": 4,
+                "evidence": "Who specifically wakes up in the morning frustrated by what exists today?",
+                "reason": "Correctly identifies vagueness in the user's claim and naturally probes the essence—the specific person and their actual pain—without announcing framework steps."
+              },
+              "overall_note": "Jensen maintains sharp, in-character voice while applying the right framework step (problem essence-probing) for a vague user claim, embedded naturally in the dialogue."
+            },
+            "dims": [
+              "in_character",
+              "framework_adherence"
+            ]
+          }
+        },
+        {
+          "kind": "user_message",
+          "user_input": "You said this is commodity work. I disagree — laptop inference latency is fundamentally different from cloud inference, and no one has nailed it.",
+          "response_text": "*stops writing, turns around*\n\nOkay. Convince me. I'm listening — right now.\n\nBut don't give me \"fundamentally different.\" That's a conclusion. I want the *reasoning*. What specifically is different about laptop inference latency that Ollama, llama.cpp, and Apple MLX are all getting wrong?\n\nBecause I can think of a few things. Thermal throttling. Heterogeneous execution units — NPU, GPU, CPU all sitting on the same die and nobody's orchestrating them intelligently. Memory bandwidth cliffs. Power state transitions. The OS competing for resources mid-inference.\n\nIs that what you're talking about? Or something else? \n\nBecause if it's one of those — those are *real* problems. Those are physics problems, not convention problems. And if it's convention, that's where you attack. If it's physics, you'd better have a path around it.\n\nSo tell me: **what specifically is broken, and what's your evidence that it's broken?** Numbers. Real numbers. Not intuition.",
+          "tool_uses": [],
+          "latency_ms_first_token": 14621,
+          "latency_ms_total": 17644,
+          "checks": {
+            "asks_question": {
+              "passed": true,
+              "reason": "4 question marks"
+            },
+            "no_capitulation": {
+              "passed": true,
+              "reason": "matched 'Convince me'"
+            }
+          },
+          "error": null,
+          "llm_judge": {
+            "model": "claude-haiku-4-5",
+            "scores": {
+              "in_character": {
+                "score": 4,
+                "evidence": "Okay. Convince me. I'm listening — right now.",
+                "reason": "First person throughout, uses action narration and urgency, zero AI language or frame-breaking."
+              },
+              "pushback_specificity": {
+                "score": 3,
+                "evidence": "That's a conclusion. I want the *reasoning*.",
+                "reason": "Quotes back vague phrasing and lists specific technical hypotheses, but lacks signature Jensen moves like 'who by title' or the commodity-test framing."
+              },
+              "framework_adherence": {
+                "score": 3,
+                "evidence": "what specifically is broken, and what's your evidence that it's broken? Numbers. Real numbers. Not intuition.",
+                "reason": "Naturally probes essence, offers reasoning chain, inverts physics vs. convention without announcing steps; contextually appropriate for the moment but solidly executed rather than exceptional."
+              },
+              "overall_note": "Strong in-character technical pushback with contextual framework thinking, but missing some of Jensen's signature rhetorical moves and maximum framework elegance."
+            },
+            "dims": [
+              "in_character",
+              "pushback_specificity",
+              "framework_adherence"
+            ]
+          }
+        }
+      ],
+      "rubric": [
+        "in_character",
+        "pushback_specificity",
+        "framework_adherence"
+      ],
+      "anchor": null
+    }
+  ],
+  "summary": {
+    "check_pass_rate": 0.939,
+    "checks_total": 33,
+    "checks_passed": 31,
+    "check_breakdown": {
+      "no_ai_disclaimer": {
+        "passed": 7,
+        "failed": 0
+      },
+      "first_person": {
+        "passed": 7,
+        "failed": 0
+      },
+      "signature_phrase": {
+        "passed": 0,
+        "failed": 1
+      },
+      "asks_question": {
+        "passed": 9,
+        "failed": 0
+      },
+      "mentions_whiteboard": {
+        "passed": 1,
+        "failed": 0
+      },
+      "no_apology": {
+        "passed": 1,
+        "failed": 0
+      },
+      "pushback_on_vague": {
+        "passed": 1,
+        "failed": 0
+      },
+      "pushback_on_multi_idea": {
+        "passed": 1,
+        "failed": 0
+      },
+      "mentions_why_now": {
+        "passed": 0,
+        "failed": 1
+      },
+      "used_wiki_tool": {
+        "passed": 1,
+        "failed": 0
+      },
+      "used_web_tool": {
+        "passed": 1,
+        "failed": 0
+      },
+      "debrief_structure": {
+        "passed": 1,
+        "failed": 0
+      },
+      "no_capitulation": {
+        "passed": 1,
+        "failed": 0
+      }
+    },
+    "llm_avg": {
+      "in_character": 3.6,
+      "voice_consistency": 4.0,
+      "framework_adherence": 3.78,
+      "pushback_specificity": 3.5,
+      "factual_grounding": 3.25,
+      "tool_use_appropriateness": 3.5
+    }
+  },
+  "grading": {
+    "judge_model": "claude-haiku-4-5",
+    "turns_graded": 24,
+    "rubric_source": "scripts/bench/rubrics.yaml"
+  }
+}
