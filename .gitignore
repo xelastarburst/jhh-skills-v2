@@ -8,6 +8,9 @@ __pycache__/
 scripts/ingest/state.json
 scripts/ingest/state.json.tmp
 
+# fetched transcripts — downloaded on demand, not source of truth
+scripts/ingest/transcripts/
+
 # benchmark run records — kept local by default (full transcripts can be bulky).
 # If you want to track trends in git, `git add -f scripts/bench/history/*.json`
 # on the runs you care about.
