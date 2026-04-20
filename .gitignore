@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.DS_Store
+.venv/
+.env
+
+# ingestion pipeline state — dedupe cache, history lives in commits
+scripts/ingest/state.json
+scripts/ingest/state.json.tmp

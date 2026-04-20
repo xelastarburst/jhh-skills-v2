@@ -1,0 +1,197 @@
+# Source registry for the Virtual Jensen knowledge-refresh pipeline.
+# Seeded from RESEARCH.md and the existing wiki/*.md pages.
+#
+# Tiers:
+#   daily     — fast-moving signal (news, earnings, new interviews, new keynotes)
+#   weekly    — product spec pages, competitive dashboards, substantial analyses
+#   monthly   — evergreen concept sources; structural framing
+#
+# Types:
+#   rss             — RSS/Atom feed
+#   youtube_channel — YouTube channel (fetched via free videos.xml feed)
+#   html            — HTML page, monitored for substantive changes
+#
+# Each entry also carries:
+#   targets         — wiki/*.md or references/*.md page(s) this source should
+#                     feed into. Empty for interview sources (they append to
+#                     references/interviews-log.md by default).
+
+# ---------------------------------------------------------------------------
+# INTERVIEW / KEYNOTE SOURCES  →  references/interviews-log.md
+# ---------------------------------------------------------------------------
+interview_sources:
+
+  # --- YouTube channels ---
+  # HEADS UP: YouTube's free `videos.xml` feed is returning 404 for every
+  # channel as of 2026-04 (upstream deprecation). The fetcher reports this
+  # cleanly and will auto-switch to a yt-dlp backend once wired in the next
+  # commit. RSS sources below are unaffected.
+  - name: NVIDIA (official)
+    type: youtube_channel
+    # @NVIDIA — GTC keynotes, CES keynotes, investor day clips
+    handle: "@NVIDIA"
+    tier: daily
+    filter: "jensen|keynote|GTC|CES"
+    notes: |
+      Primary channel for GTC + CES keynotes and Jensen fireside chats.
+
+  - name: Acquired
+    type: youtube_channel
+    handle: "@AcquiredFM"
+    tier: daily
+    filter: "jensen|nvidia|huang"
+    notes: |
+      Long-form. When they drop an NVIDIA/Jensen episode it's usually
+      the highest-signal interview of the year — flag for AssemblyAI upgrade.
+    upgrade_transcript: true
+
+  - name: BG2 Pod (Bill Gurley / Brad Gerstner)
+    type: youtube_channel
+    handle: "@BG2Pod"
+    tier: daily
+    filter: "jensen|nvidia|huang"
+    upgrade_transcript: true
+
+  - name: Lex Fridman Podcast
+    type: youtube_channel
+    handle: "@lexfridman"
+    tier: daily
+    filter: "jensen|nvidia|huang"
+    upgrade_transcript: true
+
+  - name: Stanford GSB
+    type: youtube_channel
+    handle: "@StanfordGSB"
+    tier: weekly
+    filter: "jensen|nvidia|huang"
+
+  - name: World Economic Forum
+    type: youtube_channel
+    handle: "@WorldEconomicForum"
+    tier: weekly
+    filter: "jensen|nvidia|huang"
+
+  # --- Text interviews / essays ---
+  - name: Stratechery (Ben Thompson)
+    type: rss
+    url: "https://stratechery.com/feed/"
+    tier: daily
+    filter: "jensen|nvidia|huang"
+    notes: |
+      Stratechery interviews Jensen ~annually. Filter for Jensen/NVIDIA.
+      Full transcripts usually behind paywall — fetcher reads RSS summary only.
+
+  - name: Acquired Briefing
+    type: rss
+    url: "https://www.acquiredbriefing.com/feed"
+    tier: weekly
+    filter: "jensen|nvidia|huang"
+
+  - name: Semiconductor Substack
+    type: rss
+    url: "https://semiconductor.substack.com/feed"
+    tier: weekly
+    filter: "jensen|nvidia|huang|leadership"
+
+  - name: The Chip Letter
+    type: rss
+    url: "https://thechipletter.substack.com/feed"
+    tier: weekly
+    filter: "nvidia|jensen"
+
+
+# ---------------------------------------------------------------------------
+# WIKI-UPDATE SOURCES  →  wiki/*.md
+# ---------------------------------------------------------------------------
+wiki_sources:
+
+  # --- NVIDIA primary ---
+  - name: NVIDIA Blog
+    type: rss
+    url: "https://blogs.nvidia.com/feed/"
+    tier: daily
+    targets:
+      - "products/*"
+      - "software/*"
+      - "markets/*"
+      - "concepts/*"
+
+  - name: NVIDIA Newsroom — All News
+    type: rss
+    url: "https://nvidianews.nvidia.com/rss/RSSFeed.aspx"
+    tier: daily
+    targets:
+      - "products/*"
+      - "markets/*"
+    notes: Company-wide press releases feed (redirects to newsroom CMS).
+
+  - name: NVIDIA Financial News
+    type: rss
+    url: "https://nvidianews.nvidia.com/news/financial-news.rss"
+    tier: daily
+    targets:
+      - "markets/data-center-ai.md"
+      - "markets/gaming-market.md"
+      - "markets/automotive-av.md"
+    notes: Earnings releases — critical for fast-moving market pages.
+
+  - name: NVIDIA Investor Relations — Events
+    type: html
+    url: "https://investor.nvidia.com/news-and-events/events/default.aspx"
+    tier: weekly
+    targets:
+      - "markets/*"
+    notes: Watch for upcoming earnings calls and investor days.
+
+  # --- Competitors ---
+  - name: AMD Newsroom
+    type: rss
+    url: "https://www.amd.com/en/newsroom/rss.xml"
+    tier: weekly
+    filter: "MI|Instinct|data center|AI"
+    targets:
+      - "competitors/amd.md"
+      - "competitors/ai-software-landscape.md"
+
+  - name: Intel Newsroom
+    type: rss
+    url: "https://www.intel.com/content/www/us/en/newsroom/rss.xml"
+    tier: weekly
+    filter: "Gaudi|data center|AI|accelerator"
+    targets:
+      - "competitors/intel.md"
+
+  - name: Google AI Blog
+    type: rss
+    url: "https://research.google/blog/rss"
+    tier: weekly
+    filter: "TPU|Trillium|Ironwood|hardware"
+    targets:
+      - "competitors/google-tpu.md"
+
+  - name: AWS ML Blog
+    type: rss
+    url: "https://aws.amazon.com/blogs/machine-learning/feed/"
+    tier: weekly
+    filter: "Trainium|Inferentia|Nitro"
+    targets:
+      - "competitors/custom-asics.md"
+
+  - name: Microsoft Azure Blog
+    type: rss
+    url: "https://azure.microsoft.com/en-us/blog/feed/"
+    tier: weekly
+    filter: "Maia|Cobalt|AI accelerator"
+    targets:
+      - "competitors/custom-asics.md"
+
+  # --- Concepts / evergreen (rarely updated, checked monthly) ---
+  - name: Hugging Face Blog
+    type: rss
+    url: "https://huggingface.co/blog/feed.xml"
+    tier: monthly
+    filter: "ecosystem|inference|vllm|tensorrt"
+    targets:
+      - "concepts/inference-economy.md"
+      - "concepts/cuda-moat.md"
+      - "competitors/ai-software-landscape.md"
