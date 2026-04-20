@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Virtual Jensen — monthly ingest tick.
+
+  1st of the month, 07:00 local. Runs the `monthly` tier — evergreen
+  concept sources (Hugging Face Blog, structural essays). Inherits
+  daily+weekly.
+
+  Expected cadence of actual changes is low — this is a safety net
+  to make sure no evergreen page silently rots past a year.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.virtual-jensen.monthly</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/alex/Documents/jhh-skills-v2/virtual-jensen-web/.venv/bin/python</string>
+        <string>/Users/alex/Documents/jhh-skills-v2/scripts/ingest/run.py</string>
+        <string>--tier</string><string>monthly</string>
+        <string>--invoke-agents</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/alex/Documents/jhh-skills-v2</string>
+
+    <key>StandardOutPath</key>
+    <string>/Users/alex/Documents/jhh-skills-v2/scripts/ingest/logs/monthly.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/alex/Documents/jhh-skills-v2/scripts/ingest/logs/monthly.err.log</string>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Day</key><integer>1</integer>
+        <key>Hour</key><integer>7</integer>
+        <key>Minute</key><integer>0</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>ThrottleInterval</key>
+    <integer>300</integer>
+
+    <key>Disabled</key>
+    <true/>
+</dict>
+</plist>
