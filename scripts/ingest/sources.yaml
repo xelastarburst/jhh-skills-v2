@@ -1,0 +1,327 @@
+# Source registry for the Virtual Jensen knowledge-refresh pipeline.
+# Seeded from RESEARCH.md and the existing wiki/*.md pages; curated over
+# time as we learn which sources actually carry Jensen signal.
+#
+# Tiers (how often we poll):
+#   daily     — fast-moving signal (news, earnings, new interviews, new keynotes)
+#   weekly    — product spec pages, competitive dashboards, substantial analyses
+#   monthly   — evergreen concept sources; structural framing
+#
+# Types:
+#   rss             — RSS/Atom feed
+#   youtube_channel — YouTube channel (fetched via yt-dlp --flat-playlist)
+#   html            — HTML page, monitored for substantive changes
+#
+# Interview-source-only metadata:
+#   quality_tier        — A | B | C
+#                         A = primary (Jensen speaking directly, long-form,
+#                             high canonical value — upgrade transcript auto)
+#                         B = secondary (Jensen appears occasionally or in
+#                             shorter form — upgrade only if episode >60 min
+#                             AND Jensen is the subject)
+#                         C = written analysis / third-party (no transcript
+#                             to upgrade; ingest RSS summary only)
+#   upgrade_transcript  — if true, newly-detected Jensen episodes from this
+#                         source are routed through a high-quality local STT
+#                         (faster-whisper by default; NVIDIA Parakeet when
+#                         NeMo is installed — see scripts/ingest/README.md).
+#                         No API keys, no per-minute cost.
+#
+# Wiki-source-only metadata:
+#   targets     — glob(s) under wiki/ that this source's items should feed into.
+
+# ---------------------------------------------------------------------------
+# INTERVIEW / KEYNOTE SOURCES  →  references/interviews-log.md
+# ---------------------------------------------------------------------------
+interview_sources:
+
+  # ===== TIER A — primary, long-form, Jensen's own words =====
+  #
+  # These are the highest-signal sources. Any new episode that mentions
+  # Jensen triggers an AssemblyAI-quality transcript — the extractor's
+  # output is only as good as the input.
+
+  - name: NVIDIA (official)
+    type: youtube_channel
+    handle: "@NVIDIA"
+    tier: daily
+    filter: "jensen|keynote|GTC|CES|fireside|investor day"
+    quality_tier: A
+    upgrade_transcript: true
+    notes: |
+      GTC keynotes, CES keynotes, investor day fireside chats. Jensen's
+      most rehearsed material but also where new concepts ("three
+      computers", "AI factory", "physical AI") get introduced.
+
+  - name: Acquired
+    type: youtube_channel
+    handle: "@AcquiredFM"
+    tier: daily
+    filter: "jensen|nvidia|huang"
+    quality_tier: A
+    upgrade_transcript: true
+    notes: |
+      When they drop an NVIDIA/Jensen episode it's usually the
+      single highest-signal interview of the year. Worth the upgrade.
+
+  - name: BG2 Pod (Bill Gurley / Brad Gerstner)
+    type: youtube_channel
+    handle: "@BG2Pod"
+    tier: daily
+    filter: "jensen|nvidia|huang"
+    quality_tier: A
+    upgrade_transcript: true
+    notes: |
+      Bill Gurley's operator's lens pulls different reasoning out of
+      Jensen than the tech-press interviews do.
+
+  - name: Lex Fridman Podcast
+    type: youtube_channel
+    handle: "@lexfridman"
+    tier: daily
+    filter: "jensen|nvidia|huang"
+    quality_tier: A
+    upgrade_transcript: true
+
+  - name: Stratechery Podcast
+    type: youtube_channel
+    handle: "@stratechery"
+    tier: daily
+    filter: "jensen|nvidia|huang"
+    quality_tier: A
+    upgrade_transcript: true
+    notes: |
+      Ben Thompson's annual-ish Jensen interview. Transcripts usually
+      show up on the Stratechery RSS (text) too — keep both sources.
+
+  - name: Invest Like the Best (Patrick O'Shaughnessy)
+    type: youtube_channel
+    handle: "@JoinColossus"
+    tier: daily
+    filter: "jensen|nvidia|huang"
+    quality_tier: A
+    upgrade_transcript: true
+
+  - name: All-In Podcast
+    type: youtube_channel
+    handle: "@allin"
+    tier: daily
+    filter: "jensen|nvidia|huang"
+    quality_tier: A
+    upgrade_transcript: true
+    notes: |
+      Jensen has appeared on All-In Summit stages; signal is high when
+      present but hit rate is low.
+
+  # ===== TIER B — secondary, conditional upgrade =====
+
+  - name: Stanford GSB
+    type: youtube_channel
+    handle: "@StanfordGSB"
+    tier: weekly
+    filter: "jensen|nvidia|huang"
+    quality_tier: B
+    upgrade_transcript: true
+    notes: |
+      Home of "View From The Top" — when Jensen appears it's canonical
+      material on first-principles thinking. Rare but high-value.
+
+  - name: World Economic Forum
+    type: youtube_channel
+    handle: "@WorldEconomicForum"
+    tier: weekly
+    filter: "jensen|nvidia|huang"
+    quality_tier: B
+    upgrade_transcript: false
+    notes: |
+      WEF panel appearances — usually shorter, more diplomatic.
+      Auto-captions are fine.
+
+  - name: Computer History Museum
+    type: youtube_channel
+    handle: "@ComputerHistory"
+    tier: monthly
+    filter: "jensen|nvidia|huang"
+    quality_tier: B
+    upgrade_transcript: true
+    notes: |
+      Rare but canonical when Jensen appears (oral history interviews).
+
+  - name: Sequoia Capital — Crucible Moments
+    type: youtube_channel
+    handle: "@sequoiacapital"
+    tier: weekly
+    filter: "nvidia|jensen|huang|crucible"
+    quality_tier: B
+    upgrade_transcript: true
+
+  # ===== TIER C — written analysis, no transcript upgrade =====
+
+  - name: Stratechery (Ben Thompson)
+    type: rss
+    url: "https://stratechery.com/feed/"
+    tier: daily
+    filter: "jensen|nvidia|huang"
+    quality_tier: C
+    notes: |
+      Daily updates + the occasional full Jensen interview transcript
+      (paywall trimmed to summary). Cross-check against the
+      Stratechery Podcast entry above.
+
+  - name: Acquired Briefing
+    type: rss
+    url: "https://www.acquiredbriefing.com/feed"
+    tier: weekly
+    filter: "jensen|nvidia|huang"
+    quality_tier: C
+
+  - name: Semiconductor Substack
+    type: rss
+    url: "https://semiconductor.substack.com/feed"
+    tier: weekly
+    filter: "jensen|nvidia|huang|leadership"
+    quality_tier: C
+
+  - name: The Chip Letter
+    type: rss
+    url: "https://thechipletter.substack.com/feed"
+    tier: weekly
+    filter: "nvidia|jensen"
+    quality_tier: C
+
+  - name: Dror Poleg
+    type: rss
+    url: "https://www.drorpoleg.com/feed/"
+    tier: weekly
+    filter: "nvidia|jensen|huang"
+    quality_tier: C
+
+  - name: The Generalist
+    type: rss
+    url: "https://www.generalist.com/feed"
+    tier: weekly
+    filter: "nvidia|jensen|huang"
+    quality_tier: C
+
+
+# ---------------------------------------------------------------------------
+# WIKI-UPDATE SOURCES  →  wiki/*.md
+# ---------------------------------------------------------------------------
+wiki_sources:
+
+  # --- NVIDIA primary ---
+  - name: NVIDIA Blog
+    type: rss
+    url: "https://blogs.nvidia.com/feed/"
+    tier: daily
+    targets:
+      - "products/*"
+      - "software/*"
+      - "markets/*"
+      - "concepts/*"
+
+  - name: NVIDIA Newsroom — All News
+    type: rss
+    url: "https://nvidianews.nvidia.com/rss/RSSFeed.aspx"
+    tier: daily
+    targets:
+      - "products/*"
+      - "markets/*"
+    notes: Company-wide press releases feed (redirects to newsroom CMS).
+
+  - name: NVIDIA Financial News
+    type: rss
+    url: "https://nvidianews.nvidia.com/news/financial-news.rss"
+    tier: daily
+    targets:
+      - "markets/data-center-ai.md"
+      - "markets/gaming-market.md"
+      - "markets/automotive-av.md"
+    notes: Earnings releases — critical for fast-moving market pages.
+
+  - name: NVIDIA Investor Relations — Events
+    type: html
+    url: "https://investor.nvidia.com/news-and-events/events/default.aspx"
+    tier: weekly
+    targets:
+      - "markets/*"
+    notes: Watch for upcoming earnings calls and investor days.
+
+  # --- Competitors ---
+  - name: AMD Newsroom
+    type: rss
+    url: "https://www.amd.com/en/newsroom/rss.xml"
+    tier: weekly
+    filter: "MI|Instinct|data center|AI"
+    targets:
+      - "competitors/amd.md"
+      - "competitors/ai-software-landscape.md"
+
+  - name: Intel Newsroom
+    type: rss
+    url: "https://www.intel.com/content/www/us/en/newsroom/rss.xml"
+    tier: weekly
+    filter: "Gaudi|data center|AI|accelerator"
+    targets:
+      - "competitors/intel.md"
+
+  - name: Google AI Blog
+    type: rss
+    url: "https://research.google/blog/rss"
+    tier: weekly
+    filter: "TPU|Trillium|Ironwood|hardware"
+    targets:
+      - "competitors/google-tpu.md"
+
+  - name: AWS ML Blog
+    type: rss
+    url: "https://aws.amazon.com/blogs/machine-learning/feed/"
+    tier: weekly
+    filter: "Trainium|Inferentia|Nitro"
+    targets:
+      - "competitors/custom-asics.md"
+
+  - name: Microsoft Azure Blog
+    type: rss
+    url: "https://azure.microsoft.com/en-us/blog/feed/"
+    tier: weekly
+    filter: "Maia|Cobalt|AI accelerator"
+    targets:
+      - "competitors/custom-asics.md"
+
+  # --- Concepts / evergreen ---
+  - name: Hugging Face Blog
+    type: rss
+    url: "https://huggingface.co/blog/feed.xml"
+    tier: monthly
+    filter: "ecosystem|inference|vllm|tensorrt"
+    targets:
+      - "concepts/inference-economy.md"
+      - "concepts/cuda-moat.md"
+      - "competitors/ai-software-landscape.md"
+
+  # --- Industry press (tech/semi publications with analyst-grade coverage) ---
+  - name: SemiAnalysis
+    type: rss
+    url: "https://www.semianalysis.com/feed"
+    tier: weekly
+    filter: "nvidia|blackwell|rubin|hbm|cuda|cuda-x|amd|trainium"
+    targets:
+      - "products/*"
+      - "competitors/*"
+      - "concepts/cuda-moat.md"
+    notes: |
+      Dylan Patel's analyst coverage — expensive but often has the
+      clearest read on next-generation silicon economics.
+
+  - name: The Information — AI
+    type: rss
+    url: "https://www.theinformation.com/feed"
+    tier: weekly
+    filter: "nvidia|jensen|blackwell|rubin|anthropic|openai"
+    targets:
+      - "markets/*"
+      - "competitors/*"
+    notes: |
+      Paywall means RSS is summary-only — good for surfacing a story
+      the pipeline should investigate via web search.

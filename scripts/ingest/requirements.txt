@@ -1,0 +1,9 @@
+pyyaml>=6.0
+feedparser>=6.0
+yt-dlp>=2024.0.0
+
+# Optional — transcript-upgrade backends. Install by hand when you need them.
+# faster-whisper       # --service whisper  (free, local, cross-platform)
+# nemo_toolkit[asr]    # --service parakeet (free, local; ~2 GB PyTorch+NeMo)
+# parakeet-mlx         # --service parakeet-mlx (free, local, Apple Silicon only)
+# pyannote.audio       # --diarize (free, local; needs HF_TOKEN)

@@ -27,19 +27,24 @@ let selectedModel = '';
 let selectedMode = 'sharp';
 let currentExportMarkdown = '';
 
+const STORAGE_MODEL_KEY = 'vj.selectedModel';
+const STORAGE_MODE_KEY = 'vj.selectedMode';
+
 // --- Load available models ---
 async function loadModels() {
     try {
         const resp = await fetch('/api/models');
         const data = await resp.json();
+        const saved = localStorage.getItem(STORAGE_MODEL_KEY);
         modelSelect.innerHTML = '';
         for (const [id, name] of Object.entries(data.models)) {
             const opt = document.createElement('option');
             opt.value = id;
             opt.textContent = name;
-            if (id === data.default) opt.selected = true;
             modelSelect.appendChild(opt);
         }
+        const preferred = saved && data.models[saved] ? saved : data.default;
+        modelSelect.value = preferred;
         selectedModel = modelSelect.value;
     } catch (e) {
         console.error('Failed to load models:', e);
@@ -48,6 +53,7 @@ async function loadModels() {
 
 modelSelect.addEventListener('change', () => {
     selectedModel = modelSelect.value;
+    try { localStorage.setItem(STORAGE_MODEL_KEY, selectedModel); } catch {}
 });
 
 // --- Load available modes ---
@@ -55,14 +61,16 @@ async function loadModes() {
     try {
         const resp = await fetch('/api/modes');
         const data = await resp.json();
+        const saved = localStorage.getItem(STORAGE_MODE_KEY);
         modeSelect.innerHTML = '';
         for (const [id, name] of Object.entries(data.modes)) {
             const opt = document.createElement('option');
             opt.value = id;
             opt.textContent = name;
-            if (id === data.default) opt.selected = true;
             modeSelect.appendChild(opt);
         }
+        const preferred = saved && data.modes[saved] ? saved : data.default;
+        modeSelect.value = preferred;
         selectedMode = modeSelect.value;
     } catch (e) {
         console.error('Failed to load modes:', e);
@@ -71,6 +79,7 @@ async function loadModes() {
 
 modeSelect.addEventListener('change', () => {
     selectedMode = modeSelect.value;
+    try { localStorage.setItem(STORAGE_MODE_KEY, selectedMode); } catch {}
 });
 
 // --- Markdown rendering (lightweight) ---
@@ -159,15 +168,46 @@ function createStreamingMessage() {
     label.className = 'message-label';
     label.innerHTML = `<img src="/static/jensen-avatar.svg" alt="" class="msg-avatar"><span>Jensen</span>`;
 
+    const chips = document.createElement('div');
+    chips.className = 'tool-chips';
+
     const body = document.createElement('div');
     body.className = 'message-content';
     body.innerHTML = '<p></p>';
 
     msgDiv.appendChild(label);
+    msgDiv.appendChild(chips);
     msgDiv.appendChild(body);
     chatContainer.appendChild(msgDiv);
 
-    return body;
+    return { body, chips };
+}
+
+// Icon + verb per tool name.
+const TOOL_META = {
+    web_search: { icon: '⌕', verb: 'Searching' },
+    web_fetch: { icon: '↗', verb: 'Fetching' },
+    list_wiki_pages: { icon: '▤', verb: 'Scanning wiki' },
+    read_wiki_page: { icon: '▢', verb: 'Reading' },
+    grep_wiki: { icon: '⌗', verb: 'Grepping wiki' },
+};
+
+function toolChipHTML(name, label) {
+    const meta = TOOL_META[name] || { icon: '•', verb: name };
+    const safeLabel = (label || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return `<span class="tool-chip-icon">${meta.icon}</span><span class="tool-chip-verb">${meta.verb}</span>${safeLabel ? `<span class="tool-chip-label">${safeLabel}</span>` : ''}`;
+}
+
+function addOrUpdateChip(chipsEl, id, name, label) {
+    if (!chipsEl || !id) return;
+    let chip = chipsEl.querySelector(`[data-tool-id="${CSS.escape(id)}"]`);
+    if (!chip) {
+        chip = document.createElement('span');
+        chip.className = 'tool-chip';
+        chip.setAttribute('data-tool-id', id);
+        chipsEl.appendChild(chip);
+    }
+    chip.innerHTML = toolChipHTML(name, label);
 }
 
 function showThinking() {
@@ -204,7 +244,15 @@ async function streamResponse(url, body = null) {
     showThinking();
 
     let fullText = '';
-    let bubble = null;
+    let messageEls = null; // {body, chips}
+
+    const ensureMessage = () => {
+        if (!messageEls) {
+            hideThinking();
+            messageEls = createStreamingMessage();
+        }
+        return messageEls;
+    };
 
     try {
         const response = await fetch(url, {
@@ -249,11 +297,24 @@ async function streamResponse(url, body = null) {
 
                 if (data.done) break;
 
+                if (data.tool_use) {
+                    const { id, name, label } = data.tool_use;
+                    const { chips } = ensureMessage();
+                    addOrUpdateChip(chips, id, name, label);
+                    scrollToBottom();
+                    continue;
+                }
+
+                if (data.tool_use_update) {
+                    const { id, name, label } = data.tool_use_update;
+                    const { chips } = ensureMessage();
+                    addOrUpdateChip(chips, id, name, label);
+                    scrollToBottom();
+                    continue;
+                }
+
                 if (data.text) {
-                    if (!bubble) {
-                        hideThinking();
-                        bubble = createStreamingMessage();
-                    }
+                    const { body: bubble } = ensureMessage();
                     fullText += data.text;
                     bubble.innerHTML = renderMarkdown(fullText);
                     scrollToBottom();
@@ -294,6 +355,8 @@ async function startMeeting() {
 }
 
 // --- Send message ---
+// Server holds conversation state in a Claude Agent SDK session keyed by
+// the vj_session cookie, so we only send the latest user turn.
 async function sendMessage() {
     const text = messageInput.value.trim();
     if (!text || isStreaming) return;
@@ -305,7 +368,7 @@ async function sendMessage() {
     conversationHistory.push({ role: 'user', content: text });
 
     const jensenText = await streamResponse('/api/chat', {
-        messages: conversationHistory,
+        message: text,
         model: selectedModel,
         mode: selectedMode,
     });
@@ -316,7 +379,7 @@ async function sendMessage() {
 }
 
 // --- New meeting ---
-function newMeeting() {
+async function newMeeting() {
     conversationHistory = [];
     chatContainer.innerHTML = '';
     if (exportGroup) exportGroup.style.display = 'none';
@@ -324,6 +387,10 @@ function newMeeting() {
         welcomeScreen.style.display = 'flex';
         if (startBtn) startBtn.disabled = false;
     }
+    // Tell the server to drop the SDK session so the next /api/start is fresh.
+    try {
+        await fetch('/api/new-meeting', { method: 'POST' });
+    } catch {}
 }
 
 // --- Event listeners ---

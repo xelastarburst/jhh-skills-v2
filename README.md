@@ -82,6 +82,48 @@ You don't need any agent to use this. Open `SKILL.md`, read the 7-step process a
 
 ---
 
+## Running the Web Demo
+
+The `virtual-jensen-web/` directory ships a FastAPI app that runs a live "strategy meeting" in your browser. Claude Opus 4.7 plays Jensen via the Anthropic SDK with adaptive thinking, prompt caching, and a tool-use loop — so Jensen researches on the fly:
+
+- **Server-side `web_search` / `web_fetch`** — Jensen looks up current earnings, competitor moves, and terms he doesn't recognize.
+- **Client-side wiki tools** (`list_wiki_pages`, `read_wiki_page`, `grep_wiki`) — Jensen reads the repo's `wiki/` pages on demand, with freshness warnings surfaced when a page is past its window.
+
+### 1. Install dependencies
+
+```bash
+cd virtual-jensen-web
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 2. Configure credentials
+
+Set `ANTHROPIC_API_KEY` in a `.env` file in `virtual-jensen-web/` (or export it in your shell):
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+# Optional — override the default model:
+export JENSEN_MODEL=claude-opus-4-7   # or claude-opus-4-6, claude-sonnet-4-6
+```
+
+### 3. Run it
+
+```bash
+uvicorn app:app --reload --port 8000
+```
+
+Open <http://localhost:8000> and click **Start Meeting**. The research bibliography is available at <http://localhost:8000/research>. `/api/freshness` returns the current wiki freshness scan.
+
+### Notes
+
+- Freshness of the NVIDIA wiki is validated on startup against `wiki/*.md` frontmatter — stale pages are logged as warnings and surface as a banner when Jensen reads them.
+- Your model/mode selection persists across reloads via `localStorage`.
+- `RESEARCH.md` is served from the repo root (not duplicated in `static/`).
+- Tool-use status chips render inline above Jensen's messages ("Reading `competitors/amd.md`", "Searching `NVIDIA Q1 earnings`") so you see what he's consulting in real time.
+
+---
+
 ## Files
 
 ```
@@ -90,12 +132,17 @@ virtual-jensen/
 ├── RESEARCH.md                           # Annotated bibliography of all 26 sources
 ├── cursor/
 │   └── virtual-jensen.mdc               # Pre-built Cursor rule (condensed)
-└── references/
-    ├── reasoning-system.md               # Deep dive on each cognitive operation
-    ├── company-architecture.md           # How Jensen structures organizations
-    ├── technology-bets.md                # Historical examples of the framework
-    ├── strategy-meeting.md               # Interactive meeting protocol & debrief
-    └── sources.md                        # Full source list
+├── references/
+│   ├── reasoning-system.md               # Deep dive on each cognitive operation
+│   ├── company-architecture.md           # How Jensen structures organizations
+│   ├── technology-bets.md                # Historical examples of the framework
+│   ├── strategy-meeting.md               # Interactive meeting protocol & debrief
+│   └── sources.md                        # Full source list
+├── wiki/                                 # Structured product/competitive knowledge
+└── virtual-jensen-web/                   # FastAPI + browser demo
+    ├── app.py
+    ├── requirements.txt
+    └── static/                           # index.html, research.html, app.js, style.css
 ```
 
 ## Research

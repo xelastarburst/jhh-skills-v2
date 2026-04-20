@@ -1,0 +1,107 @@
+#!/usr/bin/env sh
+# Virtual Jensen bench pre-commit hook.
+#
+# Runs a fast subset of scripts/bench/ when a commit touches files that
+# affect Jensen's behavior, and fails the commit if any rubric dimension
+# regresses >=1.0 pt or deterministic pass rate drops >=10pp.
+#
+# Bypass on a single commit:  JHH_SKIP_BENCH=1 git commit ...
+# Uninstall:                   rm .git/hooks/pre-commit
+
+set -u
+
+# ---- Bypass switch ---------------------------------------------------------
+if [ "${JHH_SKIP_BENCH:-0}" = "1" ]; then
+    printf '[pre-commit] JHH_SKIP_BENCH=1 set; skipping bench (WARNING: regressions may slip).\n' >&2
+    exit 0
+fi
+
+# ---- Locate repo root ------------------------------------------------------
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || {
+    printf '[pre-commit] not inside a git repo; skipping.\n' >&2
+    exit 0
+}
+cd "$REPO_ROOT" || exit 1
+
+# ---- Decide whether to run -------------------------------------------------
+# Only run if the staged set intersects Jensen-affecting paths.
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR) || STAGED=""
+if [ -z "$STAGED" ]; then
+    printf '[pre-commit] no staged files; skipping bench.\n'
+    exit 0
+fi
+
+AFFECTS_JENSEN=0
+# Iterate line-by-line. IFS/newlines — POSIX-safe.
+OLDIFS=$IFS
+IFS='
+'
+for f in $STAGED; do
+    case "$f" in
+        virtual-jensen-web/app.py) AFFECTS_JENSEN=1 ;;
+        SKILL.md) AFFECTS_JENSEN=1 ;;
+        references/*.md) AFFECTS_JENSEN=1 ;;
+        references/*/*.md) AFFECTS_JENSEN=1 ;;
+        wiki/*.md) AFFECTS_JENSEN=1 ;;
+        wiki/*/*.md) AFFECTS_JENSEN=1 ;;
+        scripts/bench/cases.yaml) AFFECTS_JENSEN=1 ;;
+        scripts/bench/rubrics.yaml) AFFECTS_JENSEN=1 ;;
+    esac
+    [ "$AFFECTS_JENSEN" = "1" ] && break
+done
+IFS=$OLDIFS
+
+if [ "$AFFECTS_JENSEN" != "1" ]; then
+    printf '[pre-commit] no Jensen-affecting changes; skipping bench.\n'
+    exit 0
+fi
+
+# ---- Web app must be running ----------------------------------------------
+if ! curl -sf --max-time 2 http://127.0.0.1:8000/ >/dev/null 2>&1; then
+    # Some endpoints may 404 on / but still respond; allow any HTTP response.
+    CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 http://127.0.0.1:8000/ 2>/dev/null || printf '000')
+    if [ "$CODE" = "000" ] || [ "$CODE" = "" ]; then
+        printf '\n[pre-commit] Virtual Jensen web app is not responding on 127.0.0.1:8000.\n' >&2
+        printf '             Start the web app before committing, or set JHH_SKIP_BENCH=1 to bypass.\n\n' >&2
+        printf '             cd virtual-jensen-web && .venv/bin/uvicorn app:app --port 8000\n\n' >&2
+        exit 1
+    fi
+fi
+
+# ---- Locate Python in the web app venv ------------------------------------
+PY="$REPO_ROOT/virtual-jensen-web/.venv/bin/python"
+if [ ! -x "$PY" ]; then
+    printf '[pre-commit] cannot find %s\n' "$PY" >&2
+    printf '             Set up the web app venv first, or JHH_SKIP_BENCH=1 to bypass.\n' >&2
+    exit 1
+fi
+
+# ---- Tag the run with the current HEAD short sha --------------------------
+SHORT_SHA=$(git rev-parse --short HEAD 2>/dev/null || printf 'nohead')
+TAG="pre-commit-${SHORT_SHA}"
+
+CASES="opener,vague-idea,wiki-fact-question,debrief-request"
+
+printf '[pre-commit] running bench subset (%s), tag=%s\n' "$CASES" "$TAG"
+
+# ---- 1. Drive the cases ---------------------------------------------------
+"$PY" "$REPO_ROOT/scripts/bench/run.py" --only "$CASES" --tag "$TAG" || {
+    printf '[pre-commit] run.py failed — aborting commit.\n' >&2
+    exit 1
+}
+
+# ---- 2. Grade the latest record ------------------------------------------
+"$PY" "$REPO_ROOT/scripts/bench/grade.py" || {
+    printf '[pre-commit] grade.py failed — aborting commit.\n' >&2
+    exit 1
+}
+
+# ---- 3. Trend report: non-zero exit = regression -> fail the commit ------
+if ! "$PY" "$REPO_ROOT/scripts/bench/report.py"; then
+    printf '\n[pre-commit] Regression detected. Commit blocked.\n' >&2
+    printf '             Re-run the bench manually or set JHH_SKIP_BENCH=1 to bypass.\n' >&2
+    exit 1
+fi
+
+printf '[pre-commit] bench green; allowing commit.\n'
+exit 0

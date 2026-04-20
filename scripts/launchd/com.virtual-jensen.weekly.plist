@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Virtual Jensen — weekly ingest tick.
+
+  Mondays at 07:00 local. Runs the `weekly` tier (product spec
+  pages, competitive press releases, quarterly-tier wiki pages),
+  invokes subagents in DRY-RUN. Independent of the daily plist —
+  install both if you want both tiers to run automatically.
+
+  Weekly inherits from daily (see run.py `pick_tier()`), so this
+  will cover everything daily covers PLUS weekly sources. That's
+  deliberate: Monday morning is when you want the full pipeline
+  to wake up.
+
+  See com.virtual-jensen.daily.plist for install/uninstall.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.virtual-jensen.weekly</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/alex/Documents/jhh-skills-v2/virtual-jensen-web/.venv/bin/python</string>
+        <string>/Users/alex/Documents/jhh-skills-v2/scripts/ingest/run.py</string>
+        <string>--tier</string><string>weekly</string>
+        <string>--invoke-agents</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/alex/Documents/jhh-skills-v2</string>
+
+    <key>StandardOutPath</key>
+    <string>/Users/alex/Documents/jhh-skills-v2/scripts/ingest/logs/weekly.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/alex/Documents/jhh-skills-v2/scripts/ingest/logs/weekly.err.log</string>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <!-- 0 = Sunday, 1 = Monday, … -->
+        <key>Weekday</key><integer>1</integer>
+        <key>Hour</key><integer>7</integer>
+        <key>Minute</key><integer>0</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>ThrottleInterval</key>
+    <integer>300</integer>
+
+    <key>Disabled</key>
+    <true/>
+</dict>
+</plist>
