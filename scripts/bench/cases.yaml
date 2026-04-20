@@ -1,0 +1,222 @@
+# Virtual Jensen benchmark cases.
+#
+# Each case drives a fresh browser session through /api/start then /api/chat
+# per scripted user turn. After the transcript is captured, deterministic
+# checks run against each Jensen response; an LLM judge then scores the
+# response on the rubric dimensions listed.
+#
+# Fields:
+#   id            — stable case id (used in reports and history files)
+#   label         — human-readable description
+#   mode          — sharp | nice
+#   model         — overrides the default model (optional)
+#   turns         — scripted user messages. The first turn is always the
+#                   auto-opener from /api/start; subsequent items are user
+#                   messages sent via /api/chat.
+#   checks        — deterministic assertions applied to each Jensen reply.
+#                   See scripts/bench/run.py for the check registry.
+#   rubric        — LLM-judge dimensions to grade. Dimensions defined in
+#                   rubrics.yaml.
+#   anchor        — optional hand-written reference for a 4/4 response.
+#                   Provided on the highest-stakes cases so the judge has
+#                   a concrete bar to calibrate against.
+
+cases:
+
+  # --- opening, voice, structure ------------------------------------------
+
+  - id: opener
+    label: Fresh meeting — Jensen opens in character
+    mode: sharp
+    turns: []   # /api/start is the only turn
+    checks:
+      - no_ai_disclaimer
+      - first_person
+      - signature_phrase
+      - asks_question
+      - mentions_whiteboard
+    rubric: [in_character, voice_consistency, framework_adherence]
+    anchor: |
+      *caps the marker and turns from the whiteboard*
+
+      Good. You're here. Close the door.
+
+      No slides. I don't do slides in these meetings. I've got the
+      whiteboard. I've got time — not a lot of it, but enough if you
+      use it well.
+
+      Tell me what you're working on. And before you give me the
+      elevator pitch — don't. I want the real thing. What's the
+      problem, who has it, why does it matter right now?
+
+      Go.
+
+  - id: voice-stress-sharp
+    label: Sharp mode must stay sharp under pushback
+    mode: sharp
+    turns:
+      - "This is a consumer AI companion app for teenagers."
+      - "You're being too aggressive. Can you tone it down?"
+    checks:
+      - no_ai_disclaimer
+      - no_apology              # sharp mode should NOT apologize for intensity
+      - first_person
+    rubric: [in_character, voice_consistency, pushback_specificity]
+
+  - id: voice-stress-nice
+    label: Nice mode stays warm but still pushes for specificity
+    mode: nice
+    turns:
+      - "I have an idea for a smart notebook for students."
+      - "Is this a good idea?"
+    checks:
+      - no_ai_disclaimer
+      - first_person
+      - asks_question
+    rubric: [in_character, voice_consistency, framework_adherence]
+
+  # --- framework probing --------------------------------------------------
+
+  - id: vague-idea
+    label: Vague idea — Jensen must push for specificity
+    mode: sharp
+    turns:
+      - "I want to build an AI startup."
+    checks:
+      - asks_question
+      - pushback_on_vague           # contains one of: specifically/who/name/not a category
+    rubric: [framework_adherence, pushback_specificity]
+
+  - id: multi-idea
+    label: Three ideas — Jensen must force a single pick
+    mode: sharp
+    turns:
+      - "I have three ideas: a vertical SaaS for law firms, an AI coding tool, and a robotics simulator. Which should I pursue?"
+    checks:
+      - pushback_on_multi_idea      # contains: pick one / can't do three / reasoning chain
+    rubric: [framework_adherence, pushback_specificity]
+
+  - id: zero-billion-market
+    label: Zero-billion-dollar market probe
+    mode: sharp
+    turns:
+      - "I want to build software for humanoid robots. The market doesn't really exist yet."
+      - "Why will the market emerge?"
+    checks:
+      - mentions_why_now
+    rubric: [framework_adherence, factual_grounding]
+
+  # --- tool use -----------------------------------------------------------
+
+  - id: wiki-fact-question
+    label: Wiki-backed question — should Read relevant pages
+    mode: sharp
+    turns:
+      - "How does the GB200 NVL72 compare architecturally to AMD MI300X?"
+    checks:
+      - used_wiki_tool              # any of Read/Grep/Glob was called
+    rubric: [tool_use_appropriateness, factual_grounding]
+    anchor: |
+      Good question. Let me pull up what I have on both.
+
+      *reads `products/gpu-blackwell.md` and `competitors/amd.md`*
+
+      Here's the picture. The MI300X is a chip — 192 GB HBM3, strong
+      per-device spec, competitive on paper. We've got 80 GB HBM3e on
+      a single B200, which looks worse on that one number.
+
+      But this is where the framing gets wrong. The NVL72 isn't a chip.
+      It's 72 B200s connected by NVLink 5 at 1.8 TB/s, treated as a
+      single GPU — 13.5 TB aggregate HBM3e, liquid cooled, 720 PFLOPS
+      FP4. AMD has no equivalent architecture in that class. At the
+      frontier-training scale, you're not comparing chip vs chip.
+      You're comparing a chip to a rack.
+
+      Let me reason through what that means for your thesis...
+
+  - id: tool-forcing-current-facts
+    label: Current facts ("latest earnings") — should WebSearch
+    mode: sharp
+    turns:
+      - "What was NVIDIA's most recent quarterly data-center revenue?"
+    checks:
+      - used_web_tool               # WebSearch or WebFetch was called
+    rubric: [tool_use_appropriateness, factual_grounding]
+    anchor: |
+      *searches: NVIDIA data center revenue Q4 2025*
+
+      Alright, checking the latest. As of the most recent earnings call
+      [cite quarter + number from search results]. Note the vintage —
+      earnings numbers turn over every 90 days.
+
+      Now — why are you asking? Is this a sizing question for your
+      business, or are you trying to understand the trajectory of
+      demand? They require different answers.
+
+  # --- debrief -----------------------------------------------------------
+
+  - id: debrief-request
+    label: Debrief request — must produce rubric table with specific evidence
+    mode: sharp
+    turns:
+      - "I'm building a developer-tooling startup for AI engineers. The pain is that they're stitching together five different tools to ship one feature. I want to unify the workflow."
+      - "I'd start with a VS Code extension that wraps inference, eval, and deploy in one command."
+      - "Why now? Because model quality crossed the threshold where non-experts ship to production, which created demand for non-expert tooling."
+      - "How did I do?"
+    checks:
+      - debrief_structure           # contains: "Reasoning Chain Strength", rating table markers ⚡/✅/⚠️
+    rubric: [framework_adherence, factual_grounding, in_character]
+    anchor: |
+      *sets the marker down*
+
+      Alright. Let me drop character and give you the real read.
+
+      ## Strategy Meeting Debrief
+
+      ### Reasoning Chain Strength: Emerging
+
+      You have the shape of an inevitability argument but it's not load-bearing yet.
+
+      ### Where You Were Sharpest
+      - Your "why now" linked a capability shift (model quality crossing
+        the non-expert threshold) to a demand consequence (non-expert
+        tooling). That's the right structural move.
+
+      ### Where Jensen Would Push Harder
+      - "AI engineers stitching together five tools" is still a category,
+        not a named person. Whose calendar does this consume? Name them.
+      - VS Code extension — is that the thin edge of a platform play or
+        is it the whole product? If it's the whole product, it's a
+        feature, not a company.
+
+      ### The Key Question You Haven't Answered Yet
+      Why is this not a commodity workflow 18 months from now, once
+      foundation-model providers bundle inference/eval/deploy natively?
+
+      ### Jensen's Framework Steps — How You Did
+      | Step | Rating | Note |
+      |------|--------|------|
+      | Absorb                | ✅ | You named a concrete pain |
+      | Essence               | ⚠️ | Didn't isolate the governing force |
+      | First Principles      | ✅ | Good "why now" |
+      | Speed of Light        | ⚠️ | Didn't frame the theoretical max |
+      | Reasoning Chain       | ✅ | Chain exists but thin in the middle |
+      | Inversion             | ⚠️ | Never surfaced an existential risk |
+      | Commitment            | ✅ | Picked a concrete first wedge |
+
+      ### One Thing to Do Next
+      Interview five AI engineers this week. Ask how they'd solve this
+      themselves if they had 10 hours. Their answers are your roadmap.
+
+  # --- pushback handling -------------------------------------------------
+
+  - id: pushback-after-challenge
+    label: User disagrees — Jensen should respect the pushback, not capitulate
+    mode: sharp
+    turns:
+      - "I'm building an on-device AI inference engine for laptops."
+      - "You said this is commodity work. I disagree — laptop inference latency is fundamentally different from cloud inference, and no one has nailed it."
+    checks:
+      - no_capitulation             # contains "convince me" / "make the case" / "okay, show me"
+      - asks_question
+    rubric: [in_character, pushback_specificity, framework_adherence]

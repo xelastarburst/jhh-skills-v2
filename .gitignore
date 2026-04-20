@@ -7,3 +7,8 @@ __pycache__/
 # ingestion pipeline state — dedupe cache, history lives in commits
 scripts/ingest/state.json
 scripts/ingest/state.json.tmp
+
+# benchmark run records — kept local by default (full transcripts can be bulky).
+# If you want to track trends in git, `git add -f scripts/bench/history/*.json`
+# on the runs you care about.
+scripts/bench/history/*.json
