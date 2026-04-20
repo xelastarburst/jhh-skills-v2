@@ -106,12 +106,41 @@ cached in `state.json` on first run.
 7. `launchd` plists at daily / weekly / monthly cadence. Disabled by default —
    enabled with `launchctl load`.
 
-## Why no API keys?
+## Transcript quality chain
 
-Every source here is public-web-scrapable. YouTube's `videos.xml` feed
-exposes the last 15 videos per channel without auth. RSS and plain HTML
-don't need keys. If a source dries up or rate-limits, we upgrade that
-one source to an API — not the whole pipeline.
+The interview extractor's output is only as good as the transcript it
+reads. Four tiers, prefer the highest available:
 
-The one paid dependency (AssemblyAI for long-form transcripts) is
-opt-in per-episode via the helper script in step 6, never automatic.
+| Tier | Source                                    | Cost            | When to use |
+|------|-------------------------------------------|-----------------|-------------|
+| 1    | Official channel CC (human-authored)      | Free            | If the channel uploaded real captions — best by a mile |
+| 2    | AssemblyAI with speaker diarization       | ~$0.12/hr       | **Default for Tier-A sources** in sources.yaml (Acquired, BG2, Lex, Stratechery podcast, NVIDIA official long-form, Patrick O'Shaughnessy, All-In, Computer History Museum, Stanford GSB, Sequoia) |
+| 3    | yt-dlp `--write-auto-sub` auto-captions   | Free            | Fine for daily monitoring to decide whether to upgrade |
+| 4    | RSS summary only                          | Free            | For paywalled text sources (Stratechery article, The Information) — treat as an alert, not a transcript |
+
+Flip a source to tier 2 automatically by setting `upgrade_transcript: true`
+in its `sources.yaml` entry.
+
+**Wiring AssemblyAI:**
+
+1. Get a key from <https://www.assemblyai.com> ($50 free credit on signup
+   covers ~400 hours).
+2. Add it to `virtual-jensen-web/.env` (or your shell):
+   ```bash
+   ASSEMBLYAI_API_KEY=your_key_here
+   ```
+3. Upgrade a specific video:
+   ```bash
+   scripts/ingest/upgrade_transcript.py <video_id> --service assemblyai
+   ```
+
+The helper extracts audio via yt-dlp, uploads to AssemblyAI, polls until
+the job completes, and writes `scripts/ingest/transcripts/<id>.assemblyai.txt`
+with speaker labels + timestamps. Audio file is cleaned up on exit.
+
+## Why no API keys (for the fetchers)?
+
+Every **fetcher** here is public-web-scrapable — yt-dlp against public
+channel pages, RSS, plain HTML. AssemblyAI is the only paid dependency,
+and only for explicit transcript upgrades — never called during a
+monitoring run.
