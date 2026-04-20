@@ -152,3 +152,45 @@ scripts/bench/report.py --threshold 0.5         # stricter
 scripts/bench/report.py --window 5              # compare vs median of last 5
 scripts/bench/report.py --pass-rate-threshold 0.05
 ```
+
+## Run as a pre-commit hook
+
+The bench can gate commits that touch Jensen's behavior. The hook is a
+thin POSIX shell script at `scripts/hooks/pre-commit` that:
+
+- Skips cleanly on commits that don't touch `virtual-jensen-web/app.py`,
+  `SKILL.md`, `references/**.md`, `wiki/**.md`, `scripts/bench/cases.yaml`,
+  or `scripts/bench/rubrics.yaml` — ordinary commits aren't delayed.
+- Runs a **subset** of cases (`opener`, `vague-idea`, `wiki-fact-question`,
+  `debrief-request`) for fast feedback (~60–90s), tagged with the current
+  HEAD short SHA.
+- Fails the commit if `report.py` detects a regression (≥1.0 pt drop on
+  any rubric dimension, or ≥10 pp drop in deterministic pass rate).
+
+Install (symlinks into `.git/hooks/pre-commit`, so edits to the tracked
+file take effect without re-installing):
+
+```bash
+scripts/hooks/install.sh
+```
+
+Uninstall:
+
+```bash
+rm .git/hooks/pre-commit
+```
+
+Bypass on a specific commit:
+
+```bash
+JHH_SKIP_BENCH=1 git commit -m "WIP: skip bench"
+```
+
+**Warning:** the hook requires the web app to be running on
+`127.0.0.1:8000`. If it isn't, the hook fails with instructions rather
+than silently passing. Start it in another terminal:
+
+```bash
+cd virtual-jensen-web && .venv/bin/uvicorn app:app --port 8000
+```
+
