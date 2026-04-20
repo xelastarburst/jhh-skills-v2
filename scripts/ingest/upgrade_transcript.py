@@ -1,24 +1,35 @@
 #!/usr/bin/env python3
 """Fetch a high-quality transcript for a single YouTube video.
 
-Three backends, in order of fidelity (and cost):
+Five backends, in order of recommendation for extracting Jensen material:
 
-  - ``youtube``    (default, free) — yt-dlp auto-captions. ~95%-ish
-                   accuracy, brittle on specialist vocab, no speaker
-                   labels. Good enough for daily monitoring to decide
-                   *whether* to upgrade.
-  - ``assemblyai`` (~$0.12/hr + ~$0.05/hr for speaker labels) — verbatim
-                   transcription with speaker diarization. Use for any
-                   long-form Jensen appearance we plan to extract from.
-                   Needs ``ASSEMBLYAI_API_KEY`` env var.
-  - ``rev``        (~$1.50/min) — human-grade verbatim. Not wired;
-                   AssemblyAI has been close enough at 1/10th the cost.
+  - ``whisper``    (default for upgrades, FREE, local) — faster-whisper
+                   with the ``distil-large-v3`` model. ~10-15 min for a
+                   2-hour podcast on a modern laptop CPU; faster on
+                   Apple Silicon MPS or CUDA. Good accuracy, per-segment
+                   timestamps. No diarization (single stream of text).
+                   Install: ``pip install faster-whisper``.
+  - ``parakeet``   (FREE, local, best English accuracy) — NVIDIA's own
+                   Parakeet-TDT 0.6B v2 via NeMo. Tops the Open ASR
+                   Leaderboard on English. Heavy install (~2 GB of
+                   PyTorch + NeMo). Install:
+                   ``pip install 'nemo_toolkit[asr]'``.
+  - ``youtube``    (FREE, lowest quality) — yt-dlp auto-captions. 30s
+                   fetch. Good enough to decide *whether* to upgrade,
+                   not good enough to extract quotes verbatim.
+  - ``assemblyai`` (PAID, ~$0.17/hr with diarization) — verbatim +
+                   speaker labels. Use when you need to attribute quotes
+                   in a 3+-speaker podcast. Needs ``ASSEMBLYAI_API_KEY``.
+  - ``rev``        (PAID, ~$90/hr) — human-grade verbatim. Not wired;
+                   AssemblyAI covers the need at 1/20th the cost.
 
 Usage:
-    upgrade_transcript.py VIDEO_ID [--service youtube|assemblyai|rev] [--lang en]
+    upgrade_transcript.py VIDEO_ID [--service SVC] [--lang en] [--model NAME]
 
-Writes to ``scripts/ingest/transcripts/<video_id>.<ext>`` — .vtt for
-youtube, .txt (with speaker labels) for assemblyai.
+Writes to ``scripts/ingest/transcripts/<video_id>.<service>.<ext>``.
+
+The default service is ``whisper`` because it's free, local, and
+good enough to feed the interview extractor directly.
 """
 
 from __future__ import annotations
@@ -42,10 +53,14 @@ _ASSEMBLYAI_TIMEOUT = 1200  # 20 min ceiling for a single transcript
 _ASSEMBLYAI_POLL = 8        # seconds between status polls
 _ASSEMBLYAI_BASE = "https://api.assemblyai.com/v2"
 
-SERVICES = ("youtube", "assemblyai", "rev")
+_WHISPER_DEFAULT_MODEL = "distil-large-v3"  # 6x faster, comparable accuracy
+_PARAKEET_DEFAULT_MODEL = "nvidia/parakeet-tdt-0.6b-v2"  # Open ASR leaderboard top
+_PARAKEET_TIMESTAMP_FMT = "%H:%M:%S"
+
+SERVICES = ("whisper", "parakeet", "youtube", "assemblyai", "rev")
 
 
-def _fetch_youtube(video_id: str, lang: str) -> Path:
+def _fetch_youtube(video_id: str, lang: str, **_kw) -> Path:
     binary = shutil.which("yt-dlp")
     if not binary:
         raise SystemExit("yt-dlp not installed; run: pip install yt-dlp")
@@ -91,12 +106,166 @@ def _fetch_youtube(video_id: str, lang: str) -> Path:
     return candidates[0]
 
 
-def _fetch_rev(video_id: str, lang: str) -> Path:
+def _fetch_rev(video_id: str, lang: str, **_kw) -> Path:
     raise NotImplementedError(
-        "Rev transcription not yet wired — AssemblyAI covers this need at "
-        "1/10th the cost. If you specifically need Rev's human-verbatim "
-        "tier, add the integration in scripts/ingest/upgrade_transcript.py."
+        "Rev transcription not yet wired — AssemblyAI (or local Whisper) "
+        "covers this need at a fraction of the cost. If you specifically "
+        "need Rev's human-verbatim tier, add the integration in "
+        "scripts/ingest/upgrade_transcript.py."
     )
+
+
+# ---------------------------------------------------------------------------
+# faster-whisper (local, free)
+# ---------------------------------------------------------------------------
+
+
+def _fetch_whisper(video_id: str, lang: str, *, model_name: str | None = None) -> Path:
+    try:
+        from faster_whisper import WhisperModel  # type: ignore
+    except ImportError:
+        raise SystemExit(
+            "faster-whisper not installed. Install with:\n"
+            "  pip install faster-whisper\n"
+            "First run downloads the model (~1.5 GB for distil-large-v3)."
+        )
+
+    name = model_name or _WHISPER_DEFAULT_MODEL
+    audio = _extract_audio(video_id)
+    try:
+        # device="auto" picks CUDA > MPS > CPU. compute_type="int8" keeps CPU
+        # inference fast with ~no measurable accuracy loss for English.
+        print(f"[loading whisper model: {name}]", file=sys.stderr)
+        asr = WhisperModel(name, device="auto", compute_type="int8")
+        print(f"[transcribing {audio.name}]", file=sys.stderr)
+        segments, info = asr.transcribe(
+            str(audio),
+            language=lang if lang != "auto" else None,
+            vad_filter=True,             # skip long silences
+            condition_on_previous_text=False,  # prevents looped hallucinations
+            beam_size=5,
+        )
+        lines: list[str] = [
+            f"# Transcript — faster-whisper ({name})",
+            f"# video_id: {video_id}   detected language: "
+            f"{getattr(info, 'language', '?')} "
+            f"({getattr(info, 'language_probability', 0):.2f})",
+            "",
+        ]
+        for seg in segments:
+            ts = time.strftime(_PARAKEET_TIMESTAMP_FMT, time.gmtime(seg.start))
+            text = (seg.text or "").strip()
+            if text:
+                lines.append(f"[{ts}] {text}")
+        body = "\n".join(lines) + "\n"
+    finally:
+        _cleanup_audio(audio)
+
+    TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
+    out = TRANSCRIPTS_DIR / f"{video_id}.whisper.txt"
+    out.write_text(body, encoding="utf-8")
+    return out
+
+
+# ---------------------------------------------------------------------------
+# NVIDIA Parakeet via NeMo (local, free)
+# ---------------------------------------------------------------------------
+
+
+def _fetch_parakeet(video_id: str, lang: str, *, model_name: str | None = None) -> Path:
+    # Intentionally fail if requested in a non-English context — Parakeet
+    # models on the Open ASR Leaderboard are English-only. Use whisper for
+    # multilingual.
+    if lang not in ("en", "auto"):
+        raise SystemExit(
+            f"Parakeet models are English-only (requested lang={lang!r}). "
+            f"Use --service whisper for multilingual."
+        )
+    try:
+        import nemo.collections.asr as nemo_asr  # type: ignore
+    except ImportError:
+        raise SystemExit(
+            "nemo_toolkit not installed. Install with:\n"
+            "  pip install 'nemo_toolkit[asr]'\n"
+            "This is a ~2 GB install (PyTorch, torchaudio, NeMo, "
+            "hydra-core). Use --service whisper for a lighter option."
+        )
+
+    name = model_name or _PARAKEET_DEFAULT_MODEL
+    audio = _extract_audio(video_id)
+    try:
+        print(f"[loading parakeet model: {name}]", file=sys.stderr)
+        asr = nemo_asr.models.ASRModel.from_pretrained(name)
+        print(f"[transcribing {audio.name}]", file=sys.stderr)
+        hyps = asr.transcribe([str(audio)], timestamps=True)
+    except TypeError:
+        # Older NeMo without the `timestamps=` kwarg — transcribe without.
+        hyps = asr.transcribe([str(audio)])
+    finally:
+        _cleanup_audio(audio)
+
+    text, timed_lines = _parakeet_render(hyps)
+    header = [
+        f"# Transcript — Parakeet ({name})",
+        f"# video_id: {video_id}   language: en",
+    ]
+    if timed_lines:
+        header.append("")
+        body = "\n".join(header + timed_lines) + "\n"
+    else:
+        header.append(
+            "# per-segment timestamps unavailable from this model/NeMo version"
+        )
+        header.append("")
+        body = "\n".join(header) + text.strip() + "\n"
+
+    TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
+    out = TRANSCRIPTS_DIR / f"{video_id}.parakeet.txt"
+    out.write_text(body, encoding="utf-8")
+    return out
+
+
+def _parakeet_render(hyps) -> tuple[str, list[str]]:
+    """NeMo's ASR.transcribe() return shape varies by model + version.
+
+    Normalize to (flat_text, list_of_timestamped_lines). If segment
+    timestamps aren't available, ``timestamped_lines`` is empty.
+    """
+    if not hyps:
+        return "", []
+    # NeMo often returns list[Hypothesis] or tuple(hyps, all_hyps).
+    if isinstance(hyps, tuple):
+        hyps = hyps[0] if hyps else []
+    if not hyps:
+        return "", []
+    h = hyps[0]
+    text = h.text if hasattr(h, "text") else (h if isinstance(h, str) else str(h))
+
+    timed: list[str] = []
+    # Newer NeMo: h.timestamp = {'segment': [{'start': s, 'end': e, 'segment': '...'}], 'word': [...]}
+    ts = getattr(h, "timestamp", None)
+    if isinstance(ts, dict):
+        segs = ts.get("segment") or []
+        for s in segs:
+            start = float(s.get("start", 0))
+            piece = (s.get("segment") or s.get("text") or "").strip()
+            if piece:
+                clock = time.strftime(_PARAKEET_TIMESTAMP_FMT, time.gmtime(start))
+                timed.append(f"[{clock}] {piece}")
+    return text, timed
+
+
+# ---------------------------------------------------------------------------
+# Small shared helper so every backend cleans up its temp audio the same way.
+# ---------------------------------------------------------------------------
+
+
+def _cleanup_audio(audio: Path) -> None:
+    try:
+        audio.unlink()
+        audio.parent.rmdir()
+    except OSError:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -219,14 +388,16 @@ def _format_diarized(payload: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _fetch_assemblyai(video_id: str, lang: str) -> Path:
+def _fetch_assemblyai(video_id: str, lang: str, **_kw) -> Path:
     api_key = os.environ.get("ASSEMBLYAI_API_KEY")
     if not api_key:
         raise SystemExit(
             "ASSEMBLYAI_API_KEY not set. Get a key from https://www.assemblyai.com "
             "and either export it in your shell or add it to "
             "virtual-jensen-web/.env (the web app reads that file and subsequent "
-            "child processes inherit it)."
+            "child processes inherit it).\n"
+            "If you don't want to pay, use --service whisper (or parakeet) — "
+            "both run locally and are free."
         )
 
     audio = _extract_audio(video_id)
@@ -236,12 +407,7 @@ def _fetch_assemblyai(video_id: str, lang: str) -> Path:
         transcript_id = _assemblyai_submit(upload_url, api_key, lang)
         payload = _assemblyai_poll(transcript_id, api_key)
     finally:
-        # Clean up the audio file + its tmpdir regardless of outcome.
-        try:
-            audio.unlink()
-            audio.parent.rmdir()
-        except OSError:
-            pass
+        _cleanup_audio(audio)
 
     TRANSCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
     out = TRANSCRIPTS_DIR / f"{video_id}.assemblyai.txt"
@@ -249,33 +415,56 @@ def _fetch_assemblyai(video_id: str, lang: str) -> Path:
     return out
 
 
+# Dispatch table. Backends share the signature
+#   (video_id: str, lang: str, *, model_name: str | None = None) -> Path
+# so --model can be passed uniformly.
 _DISPATCH = {
-    "youtube": _fetch_youtube,
+    "whisper":    _fetch_whisper,
+    "parakeet":   _fetch_parakeet,
+    "youtube":    _fetch_youtube,
     "assemblyai": _fetch_assemblyai,
-    "rev": _fetch_rev,
+    "rev":        _fetch_rev,
 }
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(
-        description="Fetch a transcript for a YouTube video."
+        description=(
+            "Fetch a transcript for a YouTube video. Default backend is "
+            "local faster-whisper (free, ~$0). Use --service parakeet for "
+            "NVIDIA's Parakeet, --service assemblyai for paid + diarization."
+        ),
     )
     ap.add_argument("video_id", help="11-character YouTube video ID")
     ap.add_argument(
         "--service",
         choices=SERVICES,
-        default="youtube",
-        help="Transcription backend (default: youtube auto-captions, free).",
+        default="whisper",
+        help=(
+            "Transcription backend. "
+            "whisper (default, free, local): faster-whisper distil-large-v3. "
+            "parakeet (free, local): NVIDIA Parakeet via NeMo — best English. "
+            "youtube (free, low quality): yt-dlp auto-captions. "
+            "assemblyai (paid, ~$0.17/hr): verbatim + speaker diarization. "
+            "rev (not wired)."
+        ),
     )
     ap.add_argument(
         "--lang",
         default="en",
-        help="Subtitle language code (default: en).",
+        help="Language code (default: en). 'auto' lets whisper detect; "
+             "parakeet is English-only.",
+    )
+    ap.add_argument(
+        "--model",
+        default=None,
+        help="Override the model id. For whisper: e.g. 'large-v3', 'base', "
+             "'small'. For parakeet: e.g. 'nvidia/parakeet-rnnt-1.1b'.",
     )
     args = ap.parse_args()
 
     fetcher = _DISPATCH[args.service]
-    path = fetcher(args.video_id, args.lang)
+    path = fetcher(args.video_id, args.lang, model_name=args.model)
     print(path)
     return 0
 

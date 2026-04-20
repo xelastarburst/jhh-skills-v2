@@ -109,38 +109,67 @@ cached in `state.json` on first run.
 ## Transcript quality chain
 
 The interview extractor's output is only as good as the transcript it
-reads. Four tiers, prefer the highest available:
+reads. **Default path is all-local, all-free.** Paid services are
+optional upgrades for when you explicitly need speaker diarization.
 
-| Tier | Source                                    | Cost            | When to use |
-|------|-------------------------------------------|-----------------|-------------|
-| 1    | Official channel CC (human-authored)      | Free            | If the channel uploaded real captions — best by a mile |
-| 2    | AssemblyAI with speaker diarization       | ~$0.12/hr       | **Default for Tier-A sources** in sources.yaml (Acquired, BG2, Lex, Stratechery podcast, NVIDIA official long-form, Patrick O'Shaughnessy, All-In, Computer History Museum, Stanford GSB, Sequoia) |
-| 3    | yt-dlp `--write-auto-sub` auto-captions   | Free            | Fine for daily monitoring to decide whether to upgrade |
-| 4    | RSS summary only                          | Free            | For paywalled text sources (Stratechery article, The Information) — treat as an alert, not a transcript |
+| Rank | Source                                      | Cost     | When to use |
+|------|---------------------------------------------|----------|-------------|
+| 1    | Official channel CC (human-authored)        | Free     | Best by a mile when the channel uploads real captions — use yt-dlp's `--write-sub` manually if you spot one |
+| 2    | **NVIDIA Parakeet via NeMo** (`--service parakeet`) | Free, local | Best English accuracy on the Open ASR Leaderboard. NVIDIA's own model — thematically perfect for this project. Heavier install (~2 GB of PyTorch + NeMo). |
+| 3    | **faster-whisper distil-large-v3** (`--service whisper`) — the default | Free, local | Strong accuracy, lightweight install (one `pip install`). No diarization. |
+| 4    | yt-dlp auto-captions (`--service youtube`)  | Free     | 30-second fetch. Only accurate enough for daily monitoring to decide whether to upgrade. |
+| 5    | AssemblyAI (`--service assemblyai`)         | ~$0.17/hr | Opt-in *only* when you need speaker diarization on a multi-speaker podcast (who said what, attributed per utterance). |
+| 6    | Raw RSS summary                             | Free     | For paywalled text sources (Stratechery article, The Information) — treat as an alert, not a transcript |
 
-Flip a source to tier 2 automatically by setting `upgrade_transcript: true`
-in its `sources.yaml` entry.
+Flip a source to auto-upgrade by setting `upgrade_transcript: true` in
+`sources.yaml`. The upcoming runner auto-invocation will default to
+`--service whisper` for those.
 
-**Wiring AssemblyAI:**
+### Wiring local Whisper (recommended default)
 
-1. Get a key from <https://www.assemblyai.com> ($50 free credit on signup
-   covers ~400 hours).
-2. Add it to `virtual-jensen-web/.env` (or your shell):
+```bash
+pip install faster-whisper
+# First run downloads the model (~1.5 GB for distil-large-v3).
+scripts/ingest/upgrade_transcript.py <video_id>   # whisper is the default
+```
+
+Output goes to `scripts/ingest/transcripts/<id>.whisper.txt` with
+per-segment `[HH:MM:SS]` timestamps.
+
+Runtime expectations on a laptop:
+- CPU (int8 quantized): ~10–15 min per 2-hour episode
+- Apple Silicon MPS: ~5–8 min
+- CUDA: ~2–4 min
+
+### Wiring Parakeet (best English quality)
+
+```bash
+pip install 'nemo_toolkit[asr]'       # ~2 GB install
+scripts/ingest/upgrade_transcript.py <video_id> --service parakeet
+```
+
+Output goes to `scripts/ingest/transcripts/<id>.parakeet.txt`. NeMo has
+segment-level timestamps on newer releases; the script falls back to a
+single unsegmented block on older NeMo.
+
+### Wiring AssemblyAI (optional, paid — only for diarization)
+
+Skip this unless you specifically need speaker-labelled transcripts.
+
+1. Get a key from <https://www.assemblyai.com> (free signup credit covers
+   ~100 hours of diarized audio).
+2. Add to `virtual-jensen-web/.env` or your shell:
    ```bash
    ASSEMBLYAI_API_KEY=your_key_here
    ```
-3. Upgrade a specific video:
+3. Upgrade:
    ```bash
    scripts/ingest/upgrade_transcript.py <video_id> --service assemblyai
    ```
 
-The helper extracts audio via yt-dlp, uploads to AssemblyAI, polls until
-the job completes, and writes `scripts/ingest/transcripts/<id>.assemblyai.txt`
-with speaker labels + timestamps. Audio file is cleaned up on exit.
-
 ## Why no API keys (for the fetchers)?
 
 Every **fetcher** here is public-web-scrapable — yt-dlp against public
-channel pages, RSS, plain HTML. AssemblyAI is the only paid dependency,
-and only for explicit transcript upgrades — never called during a
-monitoring run.
+channel pages, RSS, plain HTML. Local Whisper/Parakeet run on your
+machine — no network call after the model is downloaded. AssemblyAI
+is the only paid dependency, opt-in per upgrade.

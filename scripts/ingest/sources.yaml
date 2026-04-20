@@ -22,9 +22,10 @@
 #                         C = written analysis / third-party (no transcript
 #                             to upgrade; ingest RSS summary only)
 #   upgrade_transcript  — if true, newly-detected Jensen episodes from this
-#                         source are routed through AssemblyAI (paid, ~$0.12/hr,
-#                         ~$0.25 per 2-hour episode) for verbatim-quality text
-#                         instead of yt-dlp auto-captions.
+#                         source are routed through a high-quality local STT
+#                         (faster-whisper by default; NVIDIA Parakeet when
+#                         NeMo is installed — see scripts/ingest/README.md).
+#                         No API keys, no per-minute cost.
 #
 # Wiki-source-only metadata:
 #   targets     — glob(s) under wiki/ that this source's items should feed into.
